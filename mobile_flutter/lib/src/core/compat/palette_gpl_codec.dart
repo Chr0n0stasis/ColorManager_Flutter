@@ -1,0 +1,82 @@
+import 'dart:convert';
+
+import '../models/color_entry.dart';
+import '../models/palette.dart';
+import 'hex_utils.dart';
+
+class PaletteGplCodec {
+  const PaletteGplCodec();
+
+  Palette decodeString(
+    String content, {
+    required String fallbackName,
+    String? sourcePath,
+    String sourceGroup = 'materials',
+  }) {
+    final lines = const LineSplitter().convert(content);
+    var name = fallbackName;
+    final colors = <ColorEntry>[];
+
+    for (final line in lines) {
+      final stripped = line.trim();
+      if (stripped.isEmpty || stripped.startsWith('#')) {
+        continue;
+      }
+      if (stripped.startsWith('Name:')) {
+        final value = stripped.split(':').skip(1).join(':').trim();
+        if (value.isNotEmpty) {
+          name = value;
+        }
+        continue;
+      }
+      if (stripped.startsWith('GIMP Palette') || stripped.startsWith('Columns:')) {
+        continue;
+      }
+
+      final parts = stripped.split(RegExp(r'\s+'));
+      if (parts.length < 3) {
+        continue;
+      }
+
+      final red = int.tryParse(parts[0]);
+      final green = int.tryParse(parts[1]);
+      final blue = int.tryParse(parts[2]);
+      if (red == null || green == null || blue == null) {
+        continue;
+      }
+
+      final colorName = parts.length > 3
+          ? parts.sublist(3).join(' ').trim()
+          : '';
+
+      colors.add(
+        ColorEntry(
+          name: colorName.isEmpty ? 'Color ${colors.length + 1}' : colorName,
+          hexCode: rgbToHex(red, green, blue),
+        ),
+      );
+    }
+
+    return Palette(
+      name: name,
+      colors: colors,
+      sourcePath: sourcePath,
+      sourceFormat: 'gpl',
+      sourceGroup: sourceGroup,
+    );
+  }
+
+  Palette decodeBytes(
+    List<int> bytes, {
+    required String fallbackName,
+    String? sourcePath,
+    String sourceGroup = 'materials',
+  }) {
+    return decodeString(
+      utf8.decode(bytes, allowMalformed: true),
+      fallbackName: fallbackName,
+      sourcePath: sourcePath,
+      sourceGroup: sourceGroup,
+    );
+  }
+}
