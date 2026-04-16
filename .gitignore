@@ -34,6 +34,7 @@ mobile_flutter/ios/Flutter/flutter_export_environment.sh
 
 # Local app data
 app/user_config.json
+user_config.json
 
 # Logs
 *.log
