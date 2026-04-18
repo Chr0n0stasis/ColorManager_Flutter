@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 
 import 'src/core/branding/upstream_branding.dart';
 import 'src/ui/main_shell.dart';
@@ -15,12 +16,13 @@ class ColorManagerMobileApp extends StatefulWidget {
 }
 
 class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
   Color _themeSeedColor = const Color(0xFF1D4ED8);
+  bool _useMaterialDynamicColor = false;
 
-  void _setDarkMode(bool enabled) {
+  void _setThemeMode(ThemeMode mode) {
     setState(() {
-      _themeMode = enabled ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = mode;
     });
   }
 
@@ -30,27 +32,56 @@ class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
     });
   }
 
+  void _setUseMaterialDynamicColor(bool enabled) {
+    setState(() {
+      _useMaterialDynamicColor = enabled;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: '$appDisplayName $appVersion',
-      themeMode: _themeMode,
-      theme: ThemeData(
-        colorSchemeSeed: _themeSeedColor,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: _themeSeedColor,
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
-      home: MainShell(
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onDarkModeChanged: _setDarkMode,
-        themeSeedColor: _themeSeedColor,
-        onThemeSeedColorChanged: _setThemeSeedColor,
-      ),
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        final hasDynamicColor = lightDynamic != null || darkDynamic != null;
+        final useDynamic = _useMaterialDynamicColor && hasDynamicColor;
+
+        final lightScheme = useDynamic && lightDynamic != null
+            ? lightDynamic.harmonized()
+            : ColorScheme.fromSeed(
+                seedColor: _themeSeedColor,
+                brightness: Brightness.light,
+              );
+
+        final darkScheme = useDynamic && darkDynamic != null
+            ? darkDynamic.harmonized()
+            : ColorScheme.fromSeed(
+                seedColor: _themeSeedColor,
+                brightness: Brightness.dark,
+              );
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: '$appDisplayName $appVersion',
+          themeMode: _themeMode,
+          theme: ThemeData(
+            colorScheme: lightScheme,
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: darkScheme,
+            useMaterial3: true,
+          ),
+          home: MainShell(
+            themeMode: _themeMode,
+            onThemeModeChanged: _setThemeMode,
+            themeSeedColor: _themeSeedColor,
+            onThemeSeedColorChanged: _setThemeSeedColor,
+            useMaterialDynamicColor: _useMaterialDynamicColor,
+            onUseMaterialDynamicColorChanged: _setUseMaterialDynamicColor,
+            materialDynamicColorAvailable: hasDynamicColor,
+          ),
+        );
+      },
     );
   }
 }

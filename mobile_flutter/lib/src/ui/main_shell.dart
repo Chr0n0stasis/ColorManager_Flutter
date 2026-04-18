@@ -23,16 +23,22 @@ enum WorkspacePage {
 class MainShell extends StatefulWidget {
   const MainShell({
     super.key,
-    required this.isDarkMode,
-    required this.onDarkModeChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
     required this.themeSeedColor,
     required this.onThemeSeedColorChanged,
+    required this.useMaterialDynamicColor,
+    required this.onUseMaterialDynamicColorChanged,
+    required this.materialDynamicColorAvailable,
   });
 
-  final bool isDarkMode;
-  final ValueChanged<bool> onDarkModeChanged;
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
   final Color themeSeedColor;
   final ValueChanged<Color> onThemeSeedColorChanged;
+  final bool useMaterialDynamicColor;
+  final ValueChanged<bool> onUseMaterialDynamicColorChanged;
+  final bool materialDynamicColorAvailable;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -80,6 +86,16 @@ class _MainShellState extends State<MainShell> {
   int _heatmapSteps = 32;
 
   bool _autoThemeColor = true;
+
+  int? _selectedExportColorIndex;
+
+  bool _previewConfigExpanded = true;
+  bool _previewResultExpanded = true;
+  bool _previewEffectExpanded = false;
+
+  bool _exportFormatExpanded = true;
+  bool _exportGeneratorExpanded = true;
+  bool _exportStrategyExpanded = false;
 
   static const List<Color> _themeColorPresets = <Color>[
     Color(0xFF1D4ED8),
@@ -134,6 +150,17 @@ class _MainShellState extends State<MainShell> {
             file.palette.sourceFormat.toLowerCase().contains(keyword);
       }),
     );
+  }
+
+  List<ColorEntry> get _generatorColorCandidates {
+    final map = <String, ColorEntry>{};
+    for (final color in _exportColors) {
+      map.putIfAbsent(color.hexCode.toUpperCase(), () => color);
+    }
+    for (final color in (_selectedFile?.palette.colors ?? <ColorEntry>[])) {
+      map.putIfAbsent(color.hexCode.toUpperCase(), () => color);
+    }
+    return map.values.toList(growable: false);
   }
 
   bool _isColorInExport(ColorEntry color) {
@@ -340,6 +367,7 @@ class _MainShellState extends State<MainShell> {
         _exportColors.add(color);
         _statusMessage = 'Added ${color.hexCode} to cart.';
       }
+      _selectedExportColorIndex = null;
     });
     _applyAutoThemeSeedFromContext();
   }
@@ -349,6 +377,7 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _exportColorKeys.remove(key);
       _exportColors.removeWhere((item) => _colorKey(item) == key);
+      _selectedExportColorIndex = null;
       _statusMessage = 'Removed ${color.hexCode} from cart.';
     });
     _applyAutoThemeSeedFromContext();
@@ -366,11 +395,93 @@ class _MainShellState extends State<MainShell> {
     _applyAutoThemeSeedFromContext();
   }
 
+  Future<void> _addManualExportColor() async {
+    final nameController = TextEditingController();
+    final hexController = TextEditingController(text: '#1D4ED8');
+
+    final added = await showDialog<ColorEntry>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('手动添加颜色'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: '名称'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: hexController,
+                decoration: const InputDecoration(
+                  labelText: 'HEX',
+                  hintText: '#RRGGBB',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final normalized = _normalizeHexInput(hexController.text);
+                if (normalized == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('HEX 格式无效，请输入 #RRGGBB')),
+                  );
+                  return;
+                }
+
+                Navigator.of(dialogContext).pop(
+                  ColorEntry(
+                    name: nameController.text.trim().isEmpty
+                        ? 'Manual ${_exportColors.length + 1}'
+                        : nameController.text.trim(),
+                    hexCode: normalized,
+                  ),
+                );
+              },
+              child: const Text('添加'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (added == null) {
+      return;
+    }
+
+    setState(() {
+      _exportColors.add(added);
+      _rebuildExportKeys();
+      _selectedExportColorIndex = _exportColors.length - 1;
+      _statusMessage = 'Added ${added.hexCode} to cart.';
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
   void _clearExportColors() {
     setState(() {
       _exportColorKeys.clear();
       _exportColors.clear();
+      _selectedExportColorIndex = null;
       _statusMessage = 'Cart cleared.';
+    });
+  }
+
+  void _selectExportColorIndex(int index) {
+    setState(() {
+      if (_selectedExportColorIndex == index) {
+        _selectedExportColorIndex = null;
+      } else {
+        _selectedExportColorIndex = index;
+      }
     });
   }
 
@@ -385,6 +496,7 @@ class _MainShellState extends State<MainShell> {
 
     setState(() {
       _syncExportPaletteFromColors(current.palette.colors);
+      _selectedExportColorIndex = null;
       _statusMessage = 'Loaded current file colors into export cart.';
     });
     _applyAutoThemeSeedFromContext();
@@ -481,6 +593,7 @@ class _MainShellState extends State<MainShell> {
 
       setState(() {
         _syncExportPaletteFromColors(updated.palette.colors);
+        _selectedExportColorIndex = null;
         _isBusy = false;
         _statusMessage =
             'Re-extracted ${updated.palette.colors.length} colors from ${updated.fileName}.';
@@ -646,6 +759,7 @@ class _MainShellState extends State<MainShell> {
           _exportColors.addAll(generated);
         }
         _rebuildExportKeys();
+        _selectedExportColorIndex = null;
         _statusMessage = append
             ? 'Appended ${generated.length} generated colors.'
             : 'Replaced cart with ${generated.length} generated colors.';
@@ -744,6 +858,64 @@ class _MainShellState extends State<MainShell> {
     return '#${hex.substring(2)}';
   }
 
+  String? _normalizeHexInput(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+    final normalized = value.startsWith('#') ? value : '#$value';
+    final valid = RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(normalized);
+    return valid ? normalized.toUpperCase() : null;
+  }
+
+  void _setPreviewConfigExpanded(bool expanded) {
+    setState(() {
+      _previewConfigExpanded = expanded;
+      if (expanded) {
+        _previewEffectExpanded = false;
+      }
+    });
+  }
+
+  void _setPreviewResultExpanded(bool expanded) {
+    setState(() {
+      _previewResultExpanded = expanded;
+    });
+  }
+
+  void _setPreviewEffectExpanded(bool expanded) {
+    setState(() {
+      _previewEffectExpanded = expanded;
+      if (expanded) {
+        _previewConfigExpanded = false;
+      }
+    });
+  }
+
+  void _setExportFormatExpanded(bool expanded) {
+    setState(() {
+      _exportFormatExpanded = expanded;
+      if (expanded) {
+        _exportStrategyExpanded = false;
+      }
+    });
+  }
+
+  void _setExportGeneratorExpanded(bool expanded) {
+    setState(() {
+      _exportGeneratorExpanded = expanded;
+    });
+  }
+
+  void _setExportStrategyExpanded(bool expanded) {
+    setState(() {
+      _exportStrategyExpanded = expanded;
+      if (expanded) {
+        _exportFormatExpanded = false;
+      }
+    });
+  }
+
   void _openCopyrightPage() {
     showModalBottomSheet<void>(
       context: context,
@@ -801,53 +973,105 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('$appDisplayName $appVersion'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: Text(
-                _pageTitle(_activePageIndex),
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ),
+    final orientation = MediaQuery.of(context).orientation;
+    final activePage = _buildActivePage();
+
+    final appBar = AppBar(
+      toolbarHeight: 70,
+      titleSpacing: 12,
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$appDisplayName $appVersion'),
+          Text(
+            _statusWatermarkMessage,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
-      body: _buildActivePage(),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          NavigationBar(
-            selectedIndex: _activePageIndex,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.folder_copy_outlined),
-                selectedIcon: Icon(Icons.folder_copy),
-                label: 'Materials',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.preview_outlined),
-                selectedIcon: Icon(Icons.preview),
-                label: 'Preview',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.ios_share_outlined),
-                selectedIcon: Icon(Icons.ios_share),
-                label: 'Export',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
-            ],
-            onDestinationSelected: _setActivePage,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Center(
+            child: Text(
+              _pageTitle(_activePageIndex),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
           ),
-          _ComplianceStatusBar(message: _statusWatermarkMessage),
+        ),
+      ],
+    );
+
+    if (orientation == Orientation.landscape) {
+      return Scaffold(
+        appBar: appBar,
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _activePageIndex,
+              labelType: NavigationRailLabelType.all,
+              onDestinationSelected: _setActivePage,
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.folder_copy_outlined),
+                  selectedIcon: Icon(Icons.folder_copy),
+                  label: Text('Materials'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.preview_outlined),
+                  selectedIcon: Icon(Icons.preview),
+                  label: Text('Preview'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.ios_share_outlined),
+                  selectedIcon: Icon(Icons.ios_share),
+                  label: Text('Export'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: Text('Settings'),
+                ),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: activePage),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: appBar,
+      body: activePage,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _activePageIndex,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.folder_copy_outlined),
+            selectedIcon: Icon(Icons.folder_copy),
+            label: 'Materials',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.preview_outlined),
+            selectedIcon: Icon(Icons.preview),
+            label: 'Preview',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.ios_share_outlined),
+            selectedIcon: Icon(Icons.ios_share),
+            label: 'Export',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
+        onDestinationSelected: _setActivePage,
       ),
     );
   }
@@ -893,18 +1117,32 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildPreviewPage() {
-    final leftPanel = PreviewSourcePanel(
+    final sourcePanel = PreviewSourcePanel(
       files: _filteredFiles,
       selectedFile: _selectedFile,
       statusMessage: _statusMessage,
       onFileSelected: _selectFile,
     );
 
-    final centerPanel = DetailPanel(
+    final cartSummaryPanel = PreviewCartSummaryPanel(
+      cartColors: _exportColors,
+      onRemoveColor: _removeExportColor,
+      onClearPressed: _clearExportColors,
+      onUseSelectedPalettePressed: _useSelectedPaletteAsExportBase,
+      statusMessage: _statusMessage,
+    );
+
+    final canvasPanel = PreviewCanvasPanel(
       file: _selectedFile,
       isBusy: _isBusy,
       onImportPressed: _importFile,
       onImportCameraPressed: _importFromCamera,
+      onProfileChanged: _updateExtractionProfile,
+    );
+
+    final inspectorPanel = PreviewInspectorPanel(
+      file: _selectedFile,
+      isBusy: _isBusy,
       onToggleCartColor: _toggleExportColor,
       isColorInCart: _isColorInExport,
       onProfileChanged: _updateExtractionProfile,
@@ -927,60 +1165,76 @@ class _MainShellState extends State<MainShell> {
       onPreviewAlphaPercentChanged: _setPreviewAlphaPercent,
       previewMarkerShape: _previewMarkerShape,
       onPreviewMarkerShapeChanged: _setPreviewMarkerShape,
-    );
-
-    final rightPanel = PreviewCartSummaryPanel(
-      cartColors: _exportColors,
-      onRemoveColor: _removeExportColor,
-      onClearPressed: _clearExportColors,
-      onUseSelectedPalettePressed: _useSelectedPaletteAsExportBase,
-      statusMessage: _statusMessage,
+      configExpanded: _previewConfigExpanded,
+      resultExpanded: _previewResultExpanded,
+      effectExpanded: _previewEffectExpanded,
+      onConfigExpandedChanged: _setPreviewConfigExpanded,
+      onResultExpandedChanged: _setPreviewResultExpanded,
+      onEffectExpandedChanged: _setPreviewEffectExpanded,
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < LayoutContract.mediumBreakpoint) {
-          final panelWidth = math.max(320.0, constraints.maxWidth * 0.9);
+        final leftStack = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: sourcePanel),
+            const SizedBox(height: 10),
+            Expanded(child: cartSummaryPanel),
+          ],
+        );
+
+        if (constraints.maxWidth >= LayoutContract.expandedBreakpoint) {
           return Padding(
             padding: const EdgeInsets.all(12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: panelWidth * 3 + 24,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(width: panelWidth, child: leftPanel),
-                    const SizedBox(width: 12),
-                    SizedBox(width: panelWidth, child: centerPanel),
-                    const SizedBox(width: 12),
-                    SizedBox(width: panelWidth, child: rightPanel),
-                  ],
-                ),
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 26, child: leftStack),
+                const SizedBox(width: 10),
+                Expanded(flex: 40, child: canvasPanel),
+                const SizedBox(width: 10),
+                Expanded(flex: 34, child: inspectorPanel),
+              ],
+            ),
+          );
+        }
+
+        if (constraints.maxWidth >= LayoutContract.mediumBreakpoint) {
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 30, child: leftStack),
+                const SizedBox(width: 10),
+                Expanded(flex: 36, child: canvasPanel),
+                const SizedBox(width: 10),
+                Expanded(flex: 34, child: inspectorPanel),
+              ],
             ),
           );
         }
 
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                flex: LayoutContract.mediumLeftFlex,
-                child: leftPanel,
+                flex: 32,
+                child: Row(
+                  children: [
+                    Expanded(child: sourcePanel),
+                    const SizedBox(width: 8),
+                    Expanded(child: cartSummaryPanel),
+                  ],
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: LayoutContract.mediumCenterFlex,
-                child: centerPanel,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: LayoutContract.mediumRightFlex,
-                child: rightPanel,
-              ),
+              const SizedBox(height: 8),
+              Expanded(flex: 34, child: canvasPanel),
+              const SizedBox(height: 8),
+              Expanded(flex: 34, child: inspectorPanel),
             ],
           ),
         );
@@ -1002,6 +1256,13 @@ class _MainShellState extends State<MainShell> {
       generationSteps: _generationSteps,
       whiteTemperature: _whiteTemperature,
       cartIsEmpty: _exportColors.isEmpty,
+      colorCandidates: _generatorColorCandidates,
+      formatExpanded: _exportFormatExpanded,
+      generatorExpanded: _exportGeneratorExpanded,
+      strategyExpanded: _exportStrategyExpanded,
+      onFormatExpandedChanged: _setExportFormatExpanded,
+      onGeneratorExpandedChanged: _setExportGeneratorExpanded,
+      onStrategyExpandedChanged: _setExportStrategyExpanded,
       onExportPressed: _exportPalette,
       onSortByLightnessChanged: _setSortByLightness,
       onExportAsHeatmapGradientChanged: _setExportAsHeatmapGradient,
@@ -1023,27 +1284,23 @@ class _MainShellState extends State<MainShell> {
       onUseSelectedPalettePressed: _useSelectedPaletteAsExportBase,
       statusMessage: _statusMessage,
       isBusy: _isBusy,
+      selectedIndex: _selectedExportColorIndex,
+      onSelectedIndexChanged: _selectExportColorIndex,
+      onAddManualColorPressed: _addManualExportColor,
     );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < LayoutContract.mediumBreakpoint) {
-          final panelWidth = math.max(360.0, constraints.maxWidth * 0.92);
           return Padding(
             padding: const EdgeInsets.all(12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: panelWidth * 2 + 12,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(width: panelWidth, child: optionsPanel),
-                    const SizedBox(width: 12),
-                    SizedBox(width: panelWidth, child: colorsPanel),
-                  ],
-                ),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 44, child: optionsPanel),
+                const SizedBox(height: 10),
+                Expanded(flex: 56, child: colorsPanel),
+              ],
             ),
           );
         }
@@ -1078,21 +1335,50 @@ class _MainShellState extends State<MainShell> {
         children: [
           _SettingsCard(
             title: '软件外观',
-            subtitle: '深色模式、软件取色与自动取色。',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: widget.isDarkMode,
-                  onChanged: widget.onDarkModeChanged,
-                  title: const Text('深色模式'),
+                SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.light,
+                      label: Text('亮色'),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.dark,
+                      label: Text('暗色'),
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.system,
+                      label: Text('自动'),
+                    ),
+                  ],
+                  selected: {widget.themeMode},
+                  onSelectionChanged: (selection) {
+                    if (selection.isNotEmpty) {
+                      widget.onThemeModeChanged(selection.first);
+                    }
+                  },
                 ),
+                const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _autoThemeColor,
                   onChanged: _setAutoThemeColor,
-                  title: const Text('自动取色（根据当前文件/导出区首色）'),
+                  title: const Text('自动取色（从文件/导出区）'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: widget.useMaterialDynamicColor,
+                  onChanged: widget.materialDynamicColorAvailable
+                      ? widget.onUseMaterialDynamicColorChanged
+                      : null,
+                  title: const Text('Android Material 自动取色'),
+                  subtitle: Text(
+                    widget.materialDynamicColorAvailable
+                        ? '启用后优先使用系统动态配色'
+                        : '当前设备暂不支持系统动态配色',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text('当前主题色: $seedHex'),
@@ -1146,13 +1432,10 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(height: 12),
           _SettingsCard(
             title: '版权页',
-            subtitle: '查看上游署名、非商用协议与防倒卖提醒。',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Author: $appAuthor\nVersion: $appVersion',
-                ),
+                Text('Author: $appAuthor\nVersion: $appVersion'),
                 const SizedBox(height: 8),
                 FilledButton.tonalIcon(
                   onPressed: _openCopyrightPage,
@@ -1171,12 +1454,10 @@ class _MainShellState extends State<MainShell> {
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({
     required this.title,
-    required this.subtitle,
     required this.child,
   });
 
   final String title;
-  final String subtitle;
   final Widget child;
 
   @override
@@ -1197,44 +1478,9 @@ class _SettingsCard extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
             const SizedBox(height: 10),
             child,
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComplianceStatusBar extends StatelessWidget {
-  const _ComplianceStatusBar({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        border: Border(
-          top: BorderSide(color: colorScheme.outlineVariant),
-        ),
-      ),
-      child: Text(
-        message,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: colorScheme.onSurfaceVariant,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
