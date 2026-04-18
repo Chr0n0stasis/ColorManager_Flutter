@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../core/branding/upstream_branding.dart';
 import '../core/models/color_entry.dart';
 import '../core/models/extraction_profile.dart';
+import '../core/models/import_source_kind.dart';
 import '../core/models/managed_palette_file.dart';
 import '../core/models/palette.dart';
 import '../core/services/palette_generation_service.dart';
@@ -405,7 +407,7 @@ class _MainShellState extends State<MainShell> {
             fileName: fileName,
             extension: '',
             sourceKind: ImportSourceKind.palette,
-            sourceBytes: null,
+            sourceBytes: bytes,
             palette: palette,
             extractionProfile: ExtractionProfile.defaultsForSource(ImportSourceKind.palette),
             extractionRuns: 1,
