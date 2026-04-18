@@ -1458,9 +1458,11 @@ class ExportOptionsPanel extends StatelessWidget {
     required this.whiteTemperature,
     required this.cartIsEmpty,
     required this.colorCandidates,
+    required this.isBaseColorPicking,
     required this.formatExpanded,
     required this.generatorExpanded,
     required this.strategyExpanded,
+    required this.onBaseColorFieldPressed,
     required this.onFormatExpandedChanged,
     required this.onGeneratorExpandedChanged,
     required this.onStrategyExpandedChanged,
@@ -1490,9 +1492,11 @@ class ExportOptionsPanel extends StatelessWidget {
   final WhiteTemperature whiteTemperature;
   final bool cartIsEmpty;
   final List<ColorEntry> colorCandidates;
+  final bool isBaseColorPicking;
   final bool formatExpanded;
   final bool generatorExpanded;
   final bool strategyExpanded;
+  final VoidCallback onBaseColorFieldPressed;
   final ValueChanged<bool> onFormatExpandedChanged;
   final ValueChanged<bool> onGeneratorExpandedChanged;
   final ValueChanged<bool> onStrategyExpandedChanged;
@@ -1524,7 +1528,6 @@ class ExportOptionsPanel extends StatelessWidget {
       for (final color in colorCandidates) color.hexCode.toUpperCase(): color,
     }.values.toList(growable: false);
 
-    final baseSelection = _resolveCandidateHex(uniqueCandidates, baseHex);
     final secondarySelection =
         _resolveCandidateHex(uniqueCandidates, secondaryHex);
 
@@ -1584,60 +1587,56 @@ class ExportOptionsPanel extends StatelessWidget {
                 if (uniqueCandidates.isEmpty)
                   const Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('先在右侧颜色列表中添加颜色后再选择基色'),
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: baseSelection,
-                          decoration: const InputDecoration(
-                            labelText: '基色',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          items: uniqueCandidates
-                              .map(
-                                (color) => DropdownMenuItem<String>(
-                                  value: color.hexCode.toUpperCase(),
-                                  child: Text('${color.name} ${color.hexCode}'),
-                                ),
-                              )
-                              .toList(growable: false),
-                          onChanged: (value) {
-                            if (value != null) {
-                              onBaseHexChanged(value);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: secondarySelection,
-                          decoration: const InputDecoration(
-                            labelText: '第二颜色',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          items: uniqueCandidates
-                              .map(
-                                (color) => DropdownMenuItem<String>(
-                                  value: color.hexCode.toUpperCase(),
-                                  child: Text('${color.name} ${color.hexCode}'),
-                                ),
-                              )
-                              .toList(growable: false),
-                          onChanged: (value) {
-                            if (value != null) {
-                              onSecondaryHexChanged(value);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                    child: Text('先在右侧导出颜色列表中添加颜色'),
                   ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _PickHexField(
+                        label: '基色',
+                        hexCode: baseHex,
+                        active: isBaseColorPicking,
+                        enabled: uniqueCandidates.isNotEmpty,
+                        onTap: onBaseColorFieldPressed,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: uniqueCandidates.isEmpty
+                            ? null
+                            : secondarySelection,
+                        decoration: const InputDecoration(
+                          labelText: '第二颜色',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: uniqueCandidates
+                            .map(
+                              (color) => DropdownMenuItem<String>(
+                                value: color.hexCode.toUpperCase(),
+                                child: Text('${color.name} ${color.hexCode}'),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: uniqueCandidates.isEmpty
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  onSecondaryHexChanged(value);
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+                if (isBaseColorPicking) ...[
+                  const SizedBox(height: 6),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('已进入基色点选：点击右侧颜色列表中的颜色即可应用'),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -1751,6 +1750,101 @@ class ExportOptionsPanel extends StatelessWidget {
   }
 }
 
+class _PickHexField extends StatelessWidget {
+  const _PickHexField({
+    required this.label,
+    required this.hexCode,
+    required this.active,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final String hexCode;
+  final bool active;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final normalized = _normalizeHexInput(hexCode) ?? '#1D4ED8';
+    final borderColor = active ? colorScheme.primary : colorScheme.outline;
+
+    final field = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: borderColor,
+              width: active ? 2 : 1,
+            ),
+            color: active
+                ? colorScheme.primaryContainer.withValues(alpha: 0.45)
+                : colorScheme.surface,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: _parseHexColor(normalized),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    Text(
+                      normalized,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                active ? Icons.radio_button_checked : Icons.touch_app_outlined,
+                size: 18,
+                color:
+                    active ? colorScheme.primary : colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (enabled) {
+      return field;
+    }
+
+    return Opacity(
+      opacity: 0.55,
+      child: field,
+    );
+  }
+}
+
 class ExportColorListPanel extends StatelessWidget {
   const ExportColorListPanel({
     super.key,
@@ -1762,6 +1856,7 @@ class ExportColorListPanel extends StatelessWidget {
     required this.statusMessage,
     required this.isBusy,
     required this.selectedIndex,
+    required this.isBaseColorPicking,
     required this.onSelectedIndexChanged,
     required this.onAddManualColorPressed,
   });
@@ -1774,6 +1869,7 @@ class ExportColorListPanel extends StatelessWidget {
   final String? statusMessage;
   final bool isBusy;
   final int? selectedIndex;
+  final bool isBaseColorPicking;
   final ValueChanged<int> onSelectedIndexChanged;
   final Future<void> Function() onAddManualColorPressed;
 
@@ -1815,6 +1911,25 @@ class ExportColorListPanel extends StatelessWidget {
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
             const SizedBox(height: 8),
             _StatusText(message: statusMessage!),
+          ],
+          if (isBaseColorPicking) ...[
+            const SizedBox(height: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Text('基色点选中：点击下方任一颜色即可设为基色'),
+              ),
+            ),
           ],
           const SizedBox(height: 8),
           Expanded(

@@ -88,6 +88,7 @@ class _MainShellState extends State<MainShell> {
   bool _autoThemeColor = true;
 
   int? _selectedExportColorIndex;
+  bool _isPickingBaseColor = false;
 
   bool _previewConfigExpanded = true;
   bool _previewResultExpanded = true;
@@ -471,17 +472,47 @@ class _MainShellState extends State<MainShell> {
       _exportColorKeys.clear();
       _exportColors.clear();
       _selectedExportColorIndex = null;
+      _isPickingBaseColor = false;
       _statusMessage = 'Cart cleared.';
     });
   }
 
   void _selectExportColorIndex(int index) {
+    if (index < 0 || index >= _exportColors.length) {
+      return;
+    }
+
     setState(() {
+      if (_isPickingBaseColor) {
+        final color = _exportColors[index];
+        _baseHex = color.hexCode.toUpperCase();
+        _selectedExportColorIndex = index;
+        _isPickingBaseColor = false;
+        _statusMessage = 'Base color set to ${color.hexCode}.';
+        return;
+      }
+
       if (_selectedExportColorIndex == index) {
         _selectedExportColorIndex = null;
       } else {
         _selectedExportColorIndex = index;
       }
+    });
+  }
+
+  void _toggleBaseColorPicking() {
+    if (_exportColors.isEmpty) {
+      setState(() {
+        _statusMessage = 'Add colors to the export list first.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isPickingBaseColor = !_isPickingBaseColor;
+      _statusMessage = _isPickingBaseColor
+          ? 'Base color pick mode on: tap a color in the export list.'
+          : 'Base color pick canceled.';
     });
   }
 
@@ -699,6 +730,7 @@ class _MainShellState extends State<MainShell> {
   void _setBaseHex(String value) {
     setState(() {
       _baseHex = value;
+      _isPickingBaseColor = false;
     });
   }
 
@@ -1257,9 +1289,11 @@ class _MainShellState extends State<MainShell> {
       whiteTemperature: _whiteTemperature,
       cartIsEmpty: _exportColors.isEmpty,
       colorCandidates: _generatorColorCandidates,
+      isBaseColorPicking: _isPickingBaseColor,
       formatExpanded: _exportFormatExpanded,
       generatorExpanded: _exportGeneratorExpanded,
       strategyExpanded: _exportStrategyExpanded,
+      onBaseColorFieldPressed: _toggleBaseColorPicking,
       onFormatExpandedChanged: _setExportFormatExpanded,
       onGeneratorExpandedChanged: _setExportGeneratorExpanded,
       onStrategyExpandedChanged: _setExportStrategyExpanded,
@@ -1285,6 +1319,7 @@ class _MainShellState extends State<MainShell> {
       statusMessage: _statusMessage,
       isBusy: _isBusy,
       selectedIndex: _selectedExportColorIndex,
+      isBaseColorPicking: _isPickingBaseColor,
       onSelectedIndexChanged: _selectExportColorIndex,
       onAddManualColorPressed: _addManualExportColor,
     );
