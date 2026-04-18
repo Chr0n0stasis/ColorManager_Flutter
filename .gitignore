@@ -39,6 +39,18 @@ user_config.json
 # Logs
 *.log
 
+<<<<<<< HEAD
 # OS files
 .DS_Store
 Thumbs.db
+=======
+# Flutter
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/build/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/android/.gradle/
+>>>>>>> ab7f8b7 (feat: align with upstream v1.0.1 attribution and migrate mobile workspace)

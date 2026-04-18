@@ -1,0 +1,16 @@
+ColorManager Upstream Attribution Notice
+
+Upstream author: Alsophila
+Upstream release referenced by this migration: Ver 1.0.1
+
+License policy:
+- PolyForm Noncommercial 1.0.0
+- Commercial use is prohibited without explicit permission from the author.
+
+Non-commercial and anti-resale reminder:
+- This project is intended for personal, academic, and research use.
+- If anyone sold you this software, request a refund and report the seller.
+- Do not split, repackage, or redirect traffic with this project for profit.
+
+Source tracing behavior preserved in migration:
+- JSON / CSV / ASE exports append upstream developer suffix: _free_by_a

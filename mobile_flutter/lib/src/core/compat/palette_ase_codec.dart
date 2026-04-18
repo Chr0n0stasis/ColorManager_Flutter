@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../branding/upstream_branding.dart';
 import '../models/color_entry.dart';
 import '../models/palette.dart';
 import 'hex_utils.dart';
@@ -109,7 +110,7 @@ class PaletteAseCodec {
 
     for (var index = 0; index < palette.colors.length; index++) {
       final color = palette.colors[index];
-      final name = color.name.trim().isEmpty ? 'Color ${index + 1}' : color.name;
+      final name = buildExportColorName(color.name, index + 1);
       final encodedName = _encodeUtf16Be('$name\u0000');
       final payload = <int>[]
         ..addAll(_uint16Be(name.runes.length + 1))

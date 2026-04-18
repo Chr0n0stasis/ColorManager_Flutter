@@ -99,10 +99,34 @@ Color/
 │  └─ ui/
 │     ├─ main_window.py
 │     └─ pdf_dialog.py
+├─ mobile_flutter/
+│  ├─ lib/
+│  ├─ test/
+│  └─ pubspec.yaml
 ├─ icon.ico
 ├─ build_exe.py
 └─ README.md
 ```
+
+## Mobile Migration Workspace / 移动端迁移工作区
+
+The `mobile_flutter` folder is the active Flutter migration workspace.
+
+`mobile_flutter` 目录是当前 Flutter 迁移实现工作区。
+
+Current implementation in this workspace:
+
+当前已实现内容：
+
+- responsive shell that preserves desktop semantic zones (`Materials`, `Detail`, `Cart/Preview`)
+- compatible core models (`ColorEntry`, `Palette`)
+- compatibility codecs for `JSON`, `CSV`, `GPL`, `ASE`, and `PAL`
+- no new custom exchange format introduced
+
+- 保持桌面语义区域的响应式壳层（`Materials`、`Detail`、`Cart/Preview`）
+- 兼容核心模型（`ColorEntry`、`Palette`）
+- `JSON`、`CSV`、`GPL`、`ASE`、`PAL` 的兼容编解码
+- 未新增自定义交换格式
 
 ## Run From Source / 源码运行
 
@@ -163,6 +187,16 @@ Current focus:
 - 科研配色素材管理
 - 图片和 PDF 取色
 - 面向科研图表的预览与导出流程
+
+## Attribution / 署名保留
+
+- Upstream author: `Alsophila`
+- Migration repository keeps upstream non-commercial policy and author attribution.
+- Do not repackage, decompose features for resale, or use the project for commercial traffic diversion.
+
+- 上游作者：`Alsophila`
+- 本迁移仓库保留上游非商用协议与署名。
+- 禁止拆解功能用于倒卖、引流或其他商业化分发。
 
 ## License / 许可
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../models/color_entry.dart';
 import '../models/palette.dart';
+import '../branding/upstream_branding.dart';
 import 'hex_utils.dart';
 import 'json_ascii_utils.dart';
 
@@ -89,9 +90,11 @@ class PaletteJsonCodec {
     final payload = <String, Object?>{
       'name': palette.name,
       'colors': palette.colors
-          .map((color) => <String, String>{
-                'name': color.name,
-                'hex': color.hexCode,
+          .asMap()
+          .entries
+          .map((entry) => <String, String>{
+                'name': buildExportColorName(entry.value.name, entry.key + 1),
+                'hex': entry.value.hexCode,
               })
           .toList(),
     };

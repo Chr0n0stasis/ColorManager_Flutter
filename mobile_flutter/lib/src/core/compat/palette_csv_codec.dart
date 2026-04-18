@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../models/color_entry.dart';
 import '../models/palette.dart';
+import '../branding/upstream_branding.dart';
 import 'hex_utils.dart';
 
 class PaletteCsvCodec {
@@ -13,9 +14,8 @@ class PaletteCsvCodec {
     String? sourcePath,
     String sourceGroup = 'materials',
   }) {
-    final normalized = content.startsWith('\uFEFF')
-        ? content.substring(1)
-        : content;
+    final normalized =
+        content.startsWith('\uFEFF') ? content.substring(1) : content;
     final lines = const LineSplitter()
         .convert(normalized)
         .where((line) => line.trim().isNotEmpty)
@@ -60,9 +60,8 @@ class PaletteCsvCodec {
         continue;
       }
 
-      final colorName = name == null || name.isEmpty
-          ? 'Color ${colors.length + 1}'
-          : name;
+      final colorName =
+          name == null || name.isEmpty ? 'Color ${colors.length + 1}' : name;
       colors.add(
         ColorEntry(
           name: colorName,
@@ -97,9 +96,10 @@ class PaletteCsvCodec {
   String encodeString(Palette palette) {
     final buffer = StringBuffer();
     buffer.writeln('name,hex');
-    for (final color in palette.colors) {
+    for (var index = 0; index < palette.colors.length; index += 1) {
+      final color = palette.colors[index];
       buffer
-        ..write(_escapeCell(color.name))
+        ..write(_escapeCell(buildExportColorName(color.name, index + 1)))
         ..write(',')
         ..writeln(_escapeCell(color.hexCode));
     }

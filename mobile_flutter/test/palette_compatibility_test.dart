@@ -15,7 +15,8 @@ void main() {
 
     test('JSON codec keeps compatibility fields', () {
       const codec = PaletteJsonCodec();
-      final encoded = codec.encodeString(basePalette, pretty: true, ensureAscii: true);
+      final encoded =
+          codec.encodeString(basePalette, pretty: true, ensureAscii: true);
       final decoded = codec.decodeString(encoded, fallbackName: 'fallback');
 
       expect(decoded.name, equals(basePalette.name));
@@ -29,10 +30,13 @@ void main() {
       final nonAsciiName = 'Color ${String.fromCharCode(0x4E2D)}';
       final palette = Palette(
         name: 'N',
-        colors: <ColorEntry>[ColorEntry(name: nonAsciiName, hexCode: '#112233')],
+        colors: <ColorEntry>[
+          ColorEntry(name: nonAsciiName, hexCode: '#112233')
+        ],
       );
 
-      final encoded = codec.encodeString(palette, pretty: false, ensureAscii: true);
+      final encoded =
+          codec.encodeString(palette, pretty: false, ensureAscii: true);
       expect(encoded.contains('\\u4E2D'), isTrue);
     });
 
@@ -66,9 +70,31 @@ void main() {
       expect(decoded.colors.last.hexCode, equals('#F97316'));
     });
 
+    test('GPL codec roundtrip keeps names and hex', () {
+      const codec = PaletteGplCodec();
+      final bytes = codec.encodeBytes(basePalette);
+      final decoded = codec.decodeBytes(bytes, fallbackName: 'fallback');
+
+      expect(decoded.name, equals(basePalette.name));
+      expect(decoded.colors.length, equals(basePalette.colors.length));
+      expect(decoded.colors.first.name, equals('Primary'));
+      expect(decoded.colors.first.hexCode, equals('#1D4ED8'));
+      expect(decoded.colors.last.hexCode, equals('#F97316'));
+    });
+
+    test('CPT codec exports interpolated stops and decodes first stop', () {
+      const codec = PaletteCptCodec();
+      final encoded = codec.encodeBytes(basePalette);
+      final decoded = codec.decodeBytes(encoded, fallbackName: 'fallback');
+
+      expect(decoded.colors, isNotEmpty);
+      expect(decoded.colors.first.hexCode, equals('#1D4ED8'));
+    });
+
     test('Router dispatches extensions without creating new format', () {
       final router = PaletteCodecRouter();
-      final jsonBytes = utf8.encode('{"name":"P","colors":[{"name":"C","hex":"#445566"}]}');
+      final jsonBytes =
+          utf8.encode('{"name":"P","colors":[{"name":"C","hex":"#445566"}]}');
       final decoded = router.decode(
         extension: '.json',
         bytes: jsonBytes,
@@ -76,7 +102,29 @@ void main() {
       );
 
       expect(decoded.name, equals('P'));
-      expect(() => router.encode(extension: '.gpl', palette: basePalette), throwsFormatException);
+      final gplBytes = router.encode(extension: '.gpl', palette: basePalette);
+      final cptBytes = router.encode(extension: '.cpt', palette: basePalette);
+
+      expect(gplBytes, isNotEmpty);
+      expect(cptBytes, isNotEmpty);
+    });
+
+    test('ASE/JSON/CSV export includes upstream attribution suffix', () {
+      const jsonCodec = PaletteJsonCodec();
+      const csvCodec = PaletteCsvCodec();
+      const aseCodec = PaletteAseCodec();
+
+      final jsonText =
+          jsonCodec.encodeString(basePalette, pretty: false, ensureAscii: true);
+      final csvText = csvCodec.encodeString(basePalette);
+      final aseDecoded = aseCodec.decodeBytes(
+        aseCodec.encodeBytes(basePalette),
+        fallbackName: 'fallback',
+      );
+
+      expect(jsonText.contains('Primary$exportNameSuffix'), isTrue);
+      expect(csvText.contains('Primary$exportNameSuffix,#1D4ED8'), isTrue);
+      expect(aseDecoded.colors.first.name.endsWith(exportNameSuffix), isTrue);
     });
   });
 }

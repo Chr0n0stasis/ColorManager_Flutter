@@ -1,19 +1,21 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 
 import '../compat/palette_codec_router.dart';
+import '../models/color_entry.dart';
+import '../models/extraction_profile.dart';
+import '../models/import_source_kind.dart';
 import '../models/palette.dart';
 import 'palette_color_sampler.dart';
-
-enum ImportedSourceKind {
-  palette,
-  image,
-  pdf,
-}
+import 'palette_generation_service.dart';
 
 class PaletteImportResult {
   const PaletteImportResult({
@@ -21,28 +23,53 @@ class PaletteImportResult {
     required this.fileName,
     required this.extension,
     required this.sourceKind,
+    required this.sourceBytes,
+    required this.extractionProfile,
+    this.previewBytes,
   });
 
   final Palette palette;
   final String fileName;
   final String extension;
-  final ImportedSourceKind sourceKind;
+  final ImportSourceKind sourceKind;
+  final Uint8List sourceBytes;
+  final Uint8List? previewBytes;
+  final ExtractionProfile extractionProfile;
+}
+
+class PaletteReextractResult {
+  const PaletteReextractResult({
+    required this.palette,
+    required this.extractionProfile,
+    this.previewBytes,
+  });
+
+  final Palette palette;
+  final ExtractionProfile extractionProfile;
+  final Uint8List? previewBytes;
 }
 
 class PaletteImportService {
   PaletteImportService({
     PaletteCodecRouter? router,
     PaletteColorSampler? colorSampler,
+    PaletteGenerationService? generationService,
+    ImagePicker? imagePicker,
   })  : _router = router ?? PaletteCodecRouter(),
-        _colorSampler = colorSampler ?? const PaletteColorSampler();
+        _colorSampler = colorSampler ?? const PaletteColorSampler(),
+        _generationService = generationService ?? const PaletteGenerationService(),
+        _imagePicker = imagePicker ?? ImagePicker();
 
   final PaletteCodecRouter _router;
   final PaletteColorSampler _colorSampler;
+  final PaletteGenerationService _generationService;
+  final ImagePicker _imagePicker;
 
   static const List<String> _paletteExtensions = <String>[
     'json',
     'csv',
     'gpl',
+    'cpt',
     'ase',
     'pal',
   ];
@@ -63,7 +90,18 @@ class PaletteImportService {
         ..._pdfExtensions,
       ];
 
-  Future<PaletteImportResult?> pickAndImport() async {
+  List<String> get supportedExportExtensions => const <String>[
+        '.json',
+        '.csv',
+        '.gpl',
+        '.cpt',
+        '.ase',
+        '.pal',
+      ];
+
+  Future<PaletteImportResult?> pickAndImport({
+    ExtractionProfile? profile,
+  }) async {
     final picked = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       type: FileType.custom,
@@ -82,17 +120,79 @@ class PaletteImportService {
     }
 
     final extension = _normalizeExtension(platformFile.name);
-    final palette = await decodeFile(
+    final sourceKind = _resolveSourceKind(extension);
+    final preferredProfile =
+        _normalizeProfile(profile ?? ExtractionProfile.defaultsForSource(sourceKind), sourceKind);
+
+    final extracted = await _extractFromSource(
       fileName: platformFile.name,
-      bytes: bytes,
+      sourceBytes: Uint8List.fromList(bytes),
+      sourceKind: sourceKind,
+      extension: extension,
+      extractionProfile: preferredProfile,
       sourcePath: platformFile.path,
     );
 
     return PaletteImportResult(
-      palette: palette,
+      palette: extracted.palette,
       fileName: platformFile.name,
       extension: extension,
-      sourceKind: _resolveSourceKind(extension),
+      sourceKind: sourceKind,
+      sourceBytes: Uint8List.fromList(bytes),
+      previewBytes: extracted.previewBytes,
+      extractionProfile: extracted.extractionProfile,
+    );
+  }
+
+  Future<PaletteImportResult?> captureFromCamera({
+    ExtractionProfile? profile,
+  }) async {
+    final captured = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 95,
+      maxWidth: 4096,
+      requestFullMetadata: false,
+    );
+    if (captured == null) {
+      return null;
+    }
+
+    final bytes = await captured.readAsBytes();
+    if (bytes.isEmpty) {
+      throw const FileSystemException('Unable to read camera image bytes.');
+    }
+
+    final fileName = path.basename(captured.path).trim().isEmpty
+        ? 'camera_capture.jpg'
+        : path.basename(captured.path);
+    final extension = _normalizeExtension(fileName);
+    final sourceKind = ImportSourceKind.camera;
+    final preferredProfile = _normalizeProfile(
+      profile ??
+          const ExtractionProfile(
+            mode: ExtractionMode.cameraFrame,
+            sampleCount: 16,
+          ),
+      sourceKind,
+    );
+
+    final extracted = await _extractFromSource(
+      fileName: fileName,
+      sourceBytes: Uint8List.fromList(bytes),
+      sourceKind: sourceKind,
+      extension: extension,
+      extractionProfile: preferredProfile,
+      sourcePath: captured.path,
+    );
+
+    return PaletteImportResult(
+      palette: extracted.palette,
+      fileName: fileName,
+      extension: extension,
+      sourceKind: sourceKind,
+      sourceBytes: Uint8List.fromList(bytes),
+      previewBytes: extracted.previewBytes,
+      extractionProfile: extracted.extractionProfile,
     );
   }
 
@@ -102,57 +202,95 @@ class PaletteImportService {
     String? sourcePath,
   }) async {
     final extension = _normalizeExtension(fileName);
-    final fallbackName = _fallbackName(fileName);
-
-    if (_paletteExtensions.contains(extension.replaceFirst('.', ''))) {
-      return _router.decode(
-        extension: extension,
-        bytes: bytes,
-        fallbackName: fallbackName,
-        sourcePath: sourcePath,
-      );
-    }
-
-    if (_imageExtensions.contains(extension.replaceFirst('.', ''))) {
-      return _colorSampler.sampleFromImageBytes(
-        bytes,
-        fallbackName: fallbackName,
-        sourcePath: sourcePath,
-        sourceFormat: 'image',
-      );
-    }
-
-    if (_pdfExtensions.contains(extension.replaceFirst('.', ''))) {
-      return _decodePdfAsPalette(
-        bytes: bytes,
-        fallbackName: fallbackName,
-        sourcePath: sourcePath,
-      );
-    }
-
-    throw FormatException('Unsupported file type: $extension');
+    final sourceKind = _resolveSourceKind(extension);
+    final extracted = await _extractFromSource(
+      fileName: fileName,
+      sourceBytes: Uint8List.fromList(bytes),
+      sourceKind: sourceKind,
+      extension: extension,
+      extractionProfile: _normalizeProfile(
+        ExtractionProfile.defaultsForSource(sourceKind),
+        sourceKind,
+      ),
+      sourcePath: sourcePath,
+    );
+    return extracted.palette;
   }
 
-  Future<File> exportToTempFile({
+  Future<PaletteReextractResult> reextract({
+    required String fileName,
+    required String extension,
+    required ImportSourceKind sourceKind,
+    required Uint8List sourceBytes,
+    required ExtractionProfile extractionProfile,
+    String? sourcePath,
+  }) async {
+    final normalized = _normalizeExtension(extension);
+    final extracted = await _extractFromSource(
+      fileName: fileName,
+      sourceBytes: sourceBytes,
+      sourceKind: sourceKind,
+      extension: normalized,
+      extractionProfile: _normalizeProfile(extractionProfile, sourceKind),
+      sourcePath: sourcePath,
+    );
+    return PaletteReextractResult(
+      palette: extracted.palette,
+      extractionProfile: extracted.extractionProfile,
+      previewBytes: extracted.previewBytes,
+    );
+  }
+
+  Future<File> exportToContainerFile({
     required Palette palette,
     required String extension,
+    bool sortByLightness = false,
+    bool exportAsHeatmapGradient = false,
+    int heatmapSteps = 32,
   }) async {
     final normalizedExtension = extension.startsWith('.')
         ? extension.toLowerCase()
         : '.${extension.toLowerCase()}';
 
+    var outputPalette = palette;
+    if (sortByLightness) {
+      outputPalette = Palette(
+        name: outputPalette.name,
+        colors: _generationService.sortByLightness(outputPalette.colors),
+        sourcePath: outputPalette.sourcePath,
+        sourceFormat: outputPalette.sourceFormat,
+        sourceGroup: outputPalette.sourceGroup,
+        metadata: outputPalette.metadata,
+      );
+    }
+
+    if (exportAsHeatmapGradient && outputPalette.colors.isNotEmpty) {
+      final generated = _generationService.interpolateFromAnchors(
+        outputPalette.colors,
+        steps: heatmapSteps.clamp(2, 512),
+        namePrefix: 'Heatmap',
+      );
+      outputPalette = Palette(
+        name: '${outputPalette.name} Heatmap',
+        colors: generated,
+        sourcePath: outputPalette.sourcePath,
+        sourceFormat: outputPalette.sourceFormat,
+        sourceGroup: outputPalette.sourceGroup,
+        metadata: outputPalette.metadata,
+      );
+    }
+
     final bytes = _router.encode(
       extension: normalizedExtension,
-      palette: palette,
+      palette: outputPalette,
     );
 
-    final exportDirectory = Directory(
-      path.join(Directory.systemTemp.path, 'color_manager_exports'),
-    );
+    final baseDir = await _resolveExportBaseDirectory();
+    final exportDirectory = Directory(path.join(baseDir.path, 'ColorManager', 'exports'));
     await exportDirectory.create(recursive: true);
 
     final safeName = _sanitizeFileName(
-      palette.name.trim().isEmpty ? 'palette' : palette.name,
+      outputPalette.name.trim().isEmpty ? 'palette' : outputPalette.name,
     );
 
     final output = File(
@@ -162,30 +300,191 @@ class PaletteImportService {
     return output;
   }
 
-  Future<Palette> _decodePdfAsPalette({
-    required List<int> bytes,
-    required String fallbackName,
+  Future<File> exportToTempFile({
+    required Palette palette,
+    required String extension,
+  }) {
+    return exportToContainerFile(
+      palette: palette,
+      extension: extension,
+      sortByLightness: false,
+      exportAsHeatmapGradient: false,
+    );
+  }
+
+  Future<_ExtractedPayload> _extractFromSource({
+    required String fileName,
+    required Uint8List sourceBytes,
+    required ImportSourceKind sourceKind,
+    required String extension,
+    required ExtractionProfile extractionProfile,
     String? sourcePath,
   }) async {
-    await for (final page in Printing.raster(
-      Uint8List.fromList(bytes),
-      pages: const <int>[0],
-      dpi: 96,
-    )) {
-      final pngBytes = await page.toPng();
-      if (pngBytes == null || pngBytes.isEmpty) {
-        continue;
-      }
+    final fallbackName = _fallbackName(fileName);
 
-      return _colorSampler.sampleFromImageBytes(
-        pngBytes,
-        fallbackName: fallbackName,
-        sourcePath: sourcePath,
-        sourceFormat: 'pdf',
+    if (sourceKind == ImportSourceKind.palette) {
+      return _ExtractedPayload(
+        palette: _router.decode(
+          extension: extension,
+          bytes: sourceBytes,
+          fallbackName: fallbackName,
+          sourcePath: sourcePath,
+        ),
+        extractionProfile: extractionProfile.copyWith(
+          mode: ExtractionMode.wholeFile,
+          sampleCount: extractionProfile.sampleCount.clamp(1, 256),
+        ),
       );
     }
 
+    final normalizedProfile = _normalizeProfile(extractionProfile, sourceKind);
+    final previewBytes = sourceKind == ImportSourceKind.pdf
+        ? await _rasterPdfPage(
+            bytes: sourceBytes,
+            pageIndex: normalizedProfile.pageIndex,
+          )
+        : sourceBytes;
+
+    final sourceFormat = switch (sourceKind) {
+      ImportSourceKind.pdf => 'pdf',
+      ImportSourceKind.camera => 'camera',
+      _ => 'image',
+    };
+
+    if (normalizedProfile.mode == ExtractionMode.eyeDropper) {
+      final picked = _colorSampler.pickColorAt(
+        previewBytes,
+        normalizedX: normalizedProfile.eyeDropperX,
+        normalizedY: normalizedProfile.eyeDropperY,
+        name: 'Eyedropper',
+      );
+      return _ExtractedPayload(
+        palette: Palette(
+          name: fallbackName,
+          colors: <ColorEntry>[picked],
+          sourcePath: sourcePath,
+          sourceFormat: sourceFormat,
+          sourceGroup: 'materials',
+        ),
+        previewBytes: previewBytes,
+        extractionProfile: normalizedProfile,
+      );
+    }
+
+    final sampledBytes = _resolveSamplingBytes(
+      previewBytes,
+      mode: normalizedProfile.mode,
+      visibleRangeFactor: normalizedProfile.visibleRangeFactor,
+      boxLeft: normalizedProfile.boxLeft,
+      boxTop: normalizedProfile.boxTop,
+      boxWidth: normalizedProfile.boxWidth,
+      boxHeight: normalizedProfile.boxHeight,
+    );
+
+    return _ExtractedPayload(
+      palette: _colorSampler.sampleFromImageBytes(
+        sampledBytes,
+        fallbackName: fallbackName,
+        sourcePath: sourcePath,
+        sourceFormat: sourceFormat,
+        sourceGroup: 'materials',
+        maxColorsOverride: normalizedProfile.sampleCount,
+      ),
+      previewBytes: previewBytes,
+      extractionProfile: normalizedProfile,
+    );
+  }
+
+  Future<Uint8List> _rasterPdfPage({
+    required Uint8List bytes,
+    required int pageIndex,
+  }) async {
+    final page = math.max(1, pageIndex);
+    final rasterPage = await _rasterFirstAvailablePage(bytes, page);
+    if (rasterPage != null) {
+      return rasterPage;
+    }
+
+    if (page != 1) {
+      final fallbackPage = await _rasterFirstAvailablePage(bytes, 1);
+      if (fallbackPage != null) {
+        return fallbackPage;
+      }
+    }
+
     throw const FormatException('Failed to rasterize PDF for color extraction.');
+  }
+
+  Future<Uint8List?> _rasterFirstAvailablePage(Uint8List bytes, int pageIndex) async {
+    await for (final page in Printing.raster(
+      bytes,
+      pages: <int>[pageIndex - 1],
+      dpi: 120,
+    )) {
+      final pngBytes = await page.toPng();
+      if (pngBytes != null && pngBytes.isNotEmpty) {
+        return pngBytes;
+      }
+    }
+    return null;
+  }
+
+  Uint8List _resolveSamplingBytes(
+    Uint8List source, {
+    required ExtractionMode mode,
+    required double visibleRangeFactor,
+    required double boxLeft,
+    required double boxTop,
+    required double boxWidth,
+    required double boxHeight,
+  }) {
+    if (mode == ExtractionMode.wholeFile ||
+        mode == ExtractionMode.selectedPage ||
+        mode == ExtractionMode.cameraFrame) {
+      return source;
+    }
+
+    final decoded = img.decodeImage(source);
+    if (decoded == null) {
+      return source;
+    }
+
+    if (mode == ExtractionMode.visibleRange) {
+      final factor = visibleRangeFactor.clamp(0.1, 1.0);
+      final targetWidth = math.max(1, (decoded.width * factor).round());
+      final targetHeight = math.max(1, (decoded.height * factor).round());
+      final left = ((decoded.width - targetWidth) / 2).round();
+      final top = ((decoded.height - targetHeight) / 2).round();
+      final cropped = img.copyCrop(
+        decoded,
+        x: left,
+        y: top,
+        width: targetWidth,
+        height: targetHeight,
+      );
+      return Uint8List.fromList(img.encodePng(cropped));
+    }
+
+    if (mode == ExtractionMode.boxRange) {
+      final left = (boxLeft.clamp(0.0, 1.0) * decoded.width).round();
+      final top = (boxTop.clamp(0.0, 1.0) * decoded.height).round();
+      final width = (boxWidth.clamp(0.05, 1.0) * decoded.width).round();
+      final height = (boxHeight.clamp(0.05, 1.0) * decoded.height).round();
+      final boundedLeft = left.clamp(0, decoded.width - 1);
+      final boundedTop = top.clamp(0, decoded.height - 1);
+      final boundedWidth = width.clamp(1, decoded.width - boundedLeft);
+      final boundedHeight = height.clamp(1, decoded.height - boundedTop);
+      final cropped = img.copyCrop(
+        decoded,
+        x: boundedLeft,
+        y: boundedTop,
+        width: boundedWidth,
+        height: boundedHeight,
+      );
+      return Uint8List.fromList(img.encodePng(cropped));
+    }
+
+    return source;
   }
 
   Future<List<int>?> _resolveFileBytes(PlatformFile file) async {
@@ -206,15 +505,49 @@ class PaletteImportService {
     return diskFile.readAsBytes();
   }
 
-  ImportedSourceKind _resolveSourceKind(String extension) {
+  ImportSourceKind _resolveSourceKind(String extension) {
     final normalized = extension.replaceFirst('.', '');
     if (_pdfExtensions.contains(normalized)) {
-      return ImportedSourceKind.pdf;
+      return ImportSourceKind.pdf;
     }
     if (_imageExtensions.contains(normalized)) {
-      return ImportedSourceKind.image;
+      return ImportSourceKind.image;
     }
-    return ImportedSourceKind.palette;
+    return ImportSourceKind.palette;
+  }
+
+  ExtractionProfile _normalizeProfile(
+    ExtractionProfile profile,
+    ImportSourceKind sourceKind,
+  ) {
+    var mode = profile.mode;
+    if (sourceKind == ImportSourceKind.palette) {
+      mode = ExtractionMode.wholeFile;
+    }
+    if (sourceKind == ImportSourceKind.pdf && mode == ExtractionMode.cameraFrame) {
+      mode = ExtractionMode.selectedPage;
+    }
+
+    return profile.copyWith(
+      mode: mode,
+      sampleCount: profile.sampleCount.clamp(1, 256),
+      pageIndex: math.max(1, profile.pageIndex),
+      visibleRangeFactor: profile.visibleRangeFactor.clamp(0.1, 1.0),
+      boxLeft: profile.boxLeft.clamp(0.0, 1.0),
+      boxTop: profile.boxTop.clamp(0.0, 1.0),
+      boxWidth: profile.boxWidth.clamp(0.05, 1.0),
+      boxHeight: profile.boxHeight.clamp(0.05, 1.0),
+      eyeDropperX: profile.eyeDropperX.clamp(0.0, 1.0),
+      eyeDropperY: profile.eyeDropperY.clamp(0.0, 1.0),
+    );
+  }
+
+  Future<Directory> _resolveExportBaseDirectory() async {
+    try {
+      return await getApplicationDocumentsDirectory();
+    } catch (_) {
+      return Directory.systemTemp;
+    }
   }
 
   String _normalizeExtension(String fileName) {
@@ -234,4 +567,16 @@ class PaletteImportService {
     final sanitized = value.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_').trim();
     return sanitized.isEmpty ? 'palette' : sanitized;
   }
+}
+
+class _ExtractedPayload {
+  const _ExtractedPayload({
+    required this.palette,
+    required this.extractionProfile,
+    this.previewBytes,
+  });
+
+  final Palette palette;
+  final ExtractionProfile extractionProfile;
+  final Uint8List? previewBytes;
 }

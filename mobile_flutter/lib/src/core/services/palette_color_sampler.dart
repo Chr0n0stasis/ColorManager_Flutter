@@ -22,11 +22,33 @@ class PaletteColorSampler {
     String? sourcePath,
     String sourceFormat = 'image',
     String sourceGroup = 'materials',
+    int? maxColorsOverride,
   }) {
     final decoded = img.decodeImage(Uint8List.fromList(bytes));
     if (decoded == null) {
       throw const FormatException('Unsupported image content.');
     }
+
+    return sampleFromDecodedImage(
+      decoded,
+      fallbackName: fallbackName,
+      sourcePath: sourcePath,
+      sourceFormat: sourceFormat,
+      sourceGroup: sourceGroup,
+      maxColorsOverride: maxColorsOverride,
+    );
+  }
+
+  Palette sampleFromDecodedImage(
+    img.Image decoded, {
+    required String fallbackName,
+    String? sourcePath,
+    String sourceFormat = 'image',
+    String sourceGroup = 'materials',
+    int? maxColorsOverride,
+  }) {
+    final effectiveMaxColors =
+        (maxColorsOverride ?? maxColors).clamp(1, 256).toInt();
 
     final sampled = _resizeForSampling(decoded);
     final bins = <int, int>{};
@@ -57,7 +79,7 @@ class PaletteColorSampler {
     final colors = <ColorEntry>[];
     final seenHex = <String>{};
     for (final entry in sortedBins) {
-      if (colors.length >= maxColors) {
+      if (colors.length >= effectiveMaxColors) {
         break;
       }
       final color = _decodeColorBin(entry.key, colors.length + 1);
@@ -72,6 +94,30 @@ class PaletteColorSampler {
       sourcePath: sourcePath,
       sourceFormat: sourceFormat,
       sourceGroup: sourceGroup,
+    );
+  }
+
+  ColorEntry pickColorAt(
+    List<int> bytes, {
+    required double normalizedX,
+    required double normalizedY,
+    String name = 'Picked Color',
+  }) {
+    final decoded = img.decodeImage(Uint8List.fromList(bytes));
+    if (decoded == null) {
+      throw const FormatException('Unsupported image content.');
+    }
+
+    final x = (normalizedX.clamp(0.0, 1.0) * (decoded.width - 1)).round();
+    final y = (normalizedY.clamp(0.0, 1.0) * (decoded.height - 1)).round();
+    final pixel = decoded.getPixel(x, y);
+    final red = clampChannel(pixel.r);
+    final green = clampChannel(pixel.g);
+    final blue = clampChannel(pixel.b);
+
+    return ColorEntry(
+      name: name,
+      hexCode: rgbToHex(red, green, blue),
     );
   }
 

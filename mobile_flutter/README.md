@@ -30,9 +30,22 @@ This folder is the active Flutter mobile migration workspace.
 
 ## Notes
 
-- Export files are written to a temporary folder under system temp:
-  - `.../color_manager_exports/`
+- Export files are written to app container documents directory:
+  - `.../Documents/ColorManager/exports/`
 - Input/output compatibility remains the top priority.
+
+## Upstream Attribution / 上游署名与协议
+
+- Upstream author: `Alsophila`
+- License policy: `PolyForm Noncommercial 1.0.0`
+- Anti-resale statement is preserved in app status watermark rotation.
+- JSON/CSV/ASE exports keep upstream source tracing suffix: `_free_by_a`.
+
+对应上游 Ver `1.0.1` 诉求：
+
+- 保留防倒卖与退款提醒。
+- 保留非商用许可声明。
+- 导出溯源在 `ASE`、`JSON`、`CSV` 中自动写入开发者标识后缀。
 
 ## Run
 
