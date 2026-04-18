@@ -18,7 +18,7 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.5
   printing: ^5.13.4
-  webdav_client: ^3.1.2
+  webdav_client: ^1.2.2
 
 dev_dependencies:
   flutter_test:
