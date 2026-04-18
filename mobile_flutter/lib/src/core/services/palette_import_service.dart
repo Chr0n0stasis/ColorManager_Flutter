@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
@@ -57,7 +59,8 @@ class PaletteImportService {
     ImagePicker? imagePicker,
   })  : _router = router ?? PaletteCodecRouter(),
         _colorSampler = colorSampler ?? const PaletteColorSampler(),
-        _generationService = generationService ?? const PaletteGenerationService(),
+        _generationService =
+            generationService ?? const PaletteGenerationService(),
         _imagePicker = imagePicker ?? ImagePicker();
 
   final PaletteCodecRouter _router;
@@ -99,6 +102,26 @@ class PaletteImportService {
         '.pal',
       ];
 
+  bool get canCaptureFromCamera {
+    if (kIsWeb) {
+      return false;
+    }
+    if (Platform.isIOS) {
+      return false;
+    }
+    return Platform.isAndroid;
+  }
+
+  String get cameraCaptureDisabledReason {
+    if (kIsWeb) {
+      return 'Web 环境不支持相机取色。';
+    }
+    if (Platform.isIOS) {
+      return '当前 iOS 主工程未启用相机权限声明，已临时禁用相机取色以避免崩溃。';
+    }
+    return '当前平台不支持相机取色。';
+  }
+
   Future<PaletteImportResult?> pickAndImport({
     ExtractionProfile? profile,
   }) async {
@@ -121,8 +144,8 @@ class PaletteImportService {
 
     final extension = _normalizeExtension(platformFile.name);
     final sourceKind = _resolveSourceKind(extension);
-    final preferredProfile =
-        _normalizeProfile(profile ?? ExtractionProfile.defaultsForSource(sourceKind), sourceKind);
+    final preferredProfile = _normalizeProfile(
+        profile ?? ExtractionProfile.defaultsForSource(sourceKind), sourceKind);
 
     final extracted = await _extractFromSource(
       fileName: platformFile.name,
@@ -147,12 +170,24 @@ class PaletteImportService {
   Future<PaletteImportResult?> captureFromCamera({
     ExtractionProfile? profile,
   }) async {
-    final captured = await _imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 95,
-      maxWidth: 4096,
-      requestFullMetadata: false,
-    );
+    if (!canCaptureFromCamera) {
+      throw UnsupportedError(cameraCaptureDisabledReason);
+    }
+
+    XFile? captured;
+    try {
+      captured = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 95,
+        maxWidth: 4096,
+        requestFullMetadata: false,
+      );
+    } on MissingPluginException catch (error) {
+      throw UnsupportedError('相机插件不可用: $error');
+    } on PlatformException catch (error) {
+      throw UnsupportedError('相机调用失败: ${error.message ?? error.code}');
+    }
+
     if (captured == null) {
       return null;
     }
@@ -194,6 +229,38 @@ class PaletteImportService {
       previewBytes: extracted.previewBytes,
       extractionProfile: extracted.extractionProfile,
     );
+  }
+
+  Future<String> backupFavoriteSource({
+    required String fileName,
+    required Uint8List sourceBytes,
+    String? extension,
+  }) async {
+    final baseDir = await _resolveExportBaseDirectory();
+    final favoriteDir =
+        Directory(path.join(baseDir.path, 'ColorManager', 'favorate'));
+    await favoriteDir.create(recursive: true);
+
+    final baseName = _sanitizeFileName(path.basenameWithoutExtension(fileName));
+    final ext = _normalizeFavoriteExtension(fileName, extension);
+    final backupName = '${DateTime.now().millisecondsSinceEpoch}_$baseName$ext';
+    final output = File(path.join(favoriteDir.path, backupName));
+    await output.writeAsBytes(sourceBytes, flush: true);
+    return backupName;
+  }
+
+  Future<void> removeFavoriteBackup(String? backupName) async {
+    if (backupName == null || backupName.trim().isEmpty) {
+      return;
+    }
+
+    final baseDir = await _resolveExportBaseDirectory();
+    final target = File(
+      path.join(baseDir.path, 'ColorManager', 'favorate', backupName),
+    );
+    if (await target.exists()) {
+      await target.delete();
+    }
   }
 
   Future<Palette> decodeFile({
@@ -286,7 +353,8 @@ class PaletteImportService {
     );
 
     final baseDir = await _resolveExportBaseDirectory();
-    final exportDirectory = Directory(path.join(baseDir.path, 'ColorManager', 'exports'));
+    final exportDirectory =
+        Directory(path.join(baseDir.path, 'ColorManager', 'exports'));
     await exportDirectory.create(recursive: true);
 
     final safeName = _sanitizeFileName(
@@ -412,10 +480,12 @@ class PaletteImportService {
       }
     }
 
-    throw const FormatException('Failed to rasterize PDF for color extraction.');
+    throw const FormatException(
+        'Failed to rasterize PDF for color extraction.');
   }
 
-  Future<Uint8List?> _rasterFirstAvailablePage(Uint8List bytes, int pageIndex) async {
+  Future<Uint8List?> _rasterFirstAvailablePage(
+      Uint8List bytes, int pageIndex) async {
     await for (final page in Printing.raster(
       bytes,
       pages: <int>[pageIndex - 1],
@@ -524,7 +594,8 @@ class PaletteImportService {
     if (sourceKind == ImportSourceKind.palette) {
       mode = ExtractionMode.wholeFile;
     }
-    if (sourceKind == ImportSourceKind.pdf && mode == ExtractionMode.cameraFrame) {
+    if (sourceKind == ImportSourceKind.pdf &&
+        mode == ExtractionMode.cameraFrame) {
       mode = ExtractionMode.selectedPage;
     }
 
@@ -566,6 +637,18 @@ class PaletteImportService {
   String _sanitizeFileName(String value) {
     final sanitized = value.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_').trim();
     return sanitized.isEmpty ? 'palette' : sanitized;
+  }
+
+  String _normalizeFavoriteExtension(String fileName, String? extension) {
+    var ext = path.extension(fileName).trim().toLowerCase();
+    if (ext.isNotEmpty) {
+      return ext;
+    }
+    if (extension == null || extension.trim().isEmpty) {
+      return '';
+    }
+    final normalized = extension.trim().toLowerCase();
+    return normalized.startsWith('.') ? normalized : '.$normalized';
   }
 }
 

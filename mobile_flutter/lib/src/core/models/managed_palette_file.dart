@@ -17,6 +17,7 @@ class ManagedPaletteFile {
     required this.importedAt,
     this.previewBytes,
     this.isFavorite = false,
+    this.favoriteBackupName,
     this.savedProfile,
   });
 
@@ -29,6 +30,7 @@ class ManagedPaletteFile {
   final Palette palette;
   final ExtractionProfile extractionProfile;
   final bool isFavorite;
+  final String? favoriteBackupName;
   final int extractionRuns;
   final DateTime importedAt;
   final ExtractionProfile? savedProfile;
@@ -43,10 +45,12 @@ class ManagedPaletteFile {
     Palette? palette,
     ExtractionProfile? extractionProfile,
     bool? isFavorite,
+    String? favoriteBackupName,
     int? extractionRuns,
     DateTime? importedAt,
     ExtractionProfile? savedProfile,
     bool clearPreview = false,
+    bool clearFavoriteBackupName = false,
     bool clearSavedProfile = false,
   }) {
     return ManagedPaletteFile(
@@ -59,9 +63,13 @@ class ManagedPaletteFile {
       palette: palette ?? this.palette,
       extractionProfile: extractionProfile ?? this.extractionProfile,
       isFavorite: isFavorite ?? this.isFavorite,
+      favoriteBackupName: clearFavoriteBackupName
+          ? null
+          : (favoriteBackupName ?? this.favoriteBackupName),
       extractionRuns: extractionRuns ?? this.extractionRuns,
       importedAt: importedAt ?? this.importedAt,
-      savedProfile: clearSavedProfile ? null : (savedProfile ?? this.savedProfile),
+      savedProfile:
+          clearSavedProfile ? null : (savedProfile ?? this.savedProfile),
     );
   }
 }

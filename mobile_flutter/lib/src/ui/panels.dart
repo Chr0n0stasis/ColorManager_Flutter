@@ -10,9 +10,26 @@ import '../core/services/palette_generation_service.dart';
 
 enum PaletteChartMode {
   table,
-  scatter,
   line,
   bar,
+  scatter,
+  heatmap,
+  circular,
+  map,
+}
+
+enum PalettePreviewVisionMode {
+  normal,
+  grayscale,
+  colorblindProtan,
+  colorblindDeutan,
+  colorblindTritan,
+}
+
+enum PaletteMarkerShape {
+  circle,
+  square,
+  triangle,
 }
 
 class MaterialsPanel extends StatelessWidget {
@@ -43,7 +60,7 @@ class MaterialsPanel extends StatelessWidget {
   final ValueChanged<bool> onFavoriteFilterChanged;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<ManagedPaletteFile> onFileSelected;
-  final ValueChanged<ManagedPaletteFile> onToggleFavorite;
+  final Future<void> Function(ManagedPaletteFile) onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -173,8 +190,20 @@ class DetailPanel extends StatelessWidget {
     required this.onApplySavedProfilePressed,
     required this.chartMode,
     required this.onChartModeChanged,
-    required this.colorBlindFriendlyPreview,
-    required this.onColorBlindFriendlyChanged,
+    required this.previewVisionMode,
+    required this.onPreviewVisionModeChanged,
+    required this.previewSeriesCount,
+    required this.onPreviewSeriesCountChanged,
+    required this.previewGroupCount,
+    required this.onPreviewGroupCountChanged,
+    required this.previewLineWidth,
+    required this.onPreviewLineWidthChanged,
+    required this.previewMarkerSize,
+    required this.onPreviewMarkerSizeChanged,
+    required this.previewAlphaPercent,
+    required this.onPreviewAlphaPercentChanged,
+    required this.previewMarkerShape,
+    required this.onPreviewMarkerShapeChanged,
   });
 
   final ManagedPaletteFile? file;
@@ -189,8 +218,20 @@ class DetailPanel extends StatelessWidget {
   final Future<void> Function() onApplySavedProfilePressed;
   final PaletteChartMode chartMode;
   final ValueChanged<PaletteChartMode> onChartModeChanged;
-  final bool colorBlindFriendlyPreview;
-  final ValueChanged<bool> onColorBlindFriendlyChanged;
+  final PalettePreviewVisionMode previewVisionMode;
+  final ValueChanged<PalettePreviewVisionMode> onPreviewVisionModeChanged;
+  final int previewSeriesCount;
+  final ValueChanged<double> onPreviewSeriesCountChanged;
+  final int previewGroupCount;
+  final ValueChanged<double> onPreviewGroupCountChanged;
+  final int previewLineWidth;
+  final ValueChanged<double> onPreviewLineWidthChanged;
+  final int previewMarkerSize;
+  final ValueChanged<double> onPreviewMarkerSizeChanged;
+  final int previewAlphaPercent;
+  final ValueChanged<double> onPreviewAlphaPercentChanged;
+  final PaletteMarkerShape previewMarkerShape;
+  final ValueChanged<PaletteMarkerShape> onPreviewMarkerShapeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -320,23 +361,119 @@ class DetailPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    value: colorBlindFriendlyPreview,
-                    onChanged: onColorBlindFriendlyChanged,
-                    title: const Text('色盲友好预览'),
+                  child: DropdownButtonFormField<PalettePreviewVisionMode>(
+                    initialValue: previewVisionMode,
+                    decoration: const InputDecoration(
+                      labelText: '视觉模式',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: PalettePreviewVisionMode.values
+                        .map(
+                          (mode) => DropdownMenuItem<PalettePreviewVisionMode>(
+                            value: mode,
+                            child: Text(_visionModeLabel(mode)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onPreviewVisionModeChanged(value);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<PaletteMarkerShape>(
+                    initialValue: previewMarkerShape,
+                    decoration: const InputDecoration(
+                      labelText: '点形状',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: PaletteMarkerShape.values
+                        .map(
+                          (shape) => DropdownMenuItem<PaletteMarkerShape>(
+                            value: shape,
+                            child: Text(_markerShapeLabel(shape)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onPreviewMarkerShapeChanged(value);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Series $previewSeriesCount · Group $previewGroupCount · Alpha $previewAlphaPercent%',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            _LabeledSlider(
+              label: 'Series: $previewSeriesCount',
+              value: previewSeriesCount.toDouble(),
+              min: 1,
+              max: 24,
+              divisions: 23,
+              onChanged: onPreviewSeriesCountChanged,
+            ),
+            _LabeledSlider(
+              label: 'Group: $previewGroupCount',
+              value: previewGroupCount.toDouble(),
+              min: 2,
+              max: 48,
+              divisions: 46,
+              onChanged: onPreviewGroupCountChanged,
+            ),
+            _LabeledSlider(
+              label: 'Line Width: $previewLineWidth',
+              value: previewLineWidth.toDouble(),
+              min: 1,
+              max: 8,
+              divisions: 7,
+              onChanged: onPreviewLineWidthChanged,
+            ),
+            _LabeledSlider(
+              label: 'Point Size: $previewMarkerSize',
+              value: previewMarkerSize.toDouble(),
+              min: 2,
+              max: 18,
+              divisions: 16,
+              onChanged: onPreviewMarkerSizeChanged,
+            ),
+            _LabeledSlider(
+              label: 'Alpha: $previewAlphaPercent%',
+              value: previewAlphaPercent.toDouble(),
+              min: 10,
+              max: 100,
+              divisions: 18,
+              onChanged: onPreviewAlphaPercentChanged,
+            ),
+            const SizedBox(height: 8),
             SizedBox(
-              height: 190,
+              height: 240,
               child: _PaletteChartPreview(
                 colors: file!.palette.colors,
                 mode: chartMode,
-                colorBlindFriendly: colorBlindFriendlyPreview,
+                visionMode: previewVisionMode,
+                seriesCount: previewSeriesCount,
+                groupCount: previewGroupCount,
+                lineWidth: previewLineWidth,
+                markerSize: previewMarkerSize,
+                markerShape: previewMarkerShape,
+                alphaPercent: previewAlphaPercent,
                 isSelected: isColorInCart,
               ),
             ),
@@ -740,7 +877,583 @@ class CartPreviewPanel extends StatelessWidget {
   }
 }
 
-class _PreviewBox extends StatelessWidget {
+class PreviewSourcePanel extends StatelessWidget {
+  const PreviewSourcePanel({
+    super.key,
+    required this.files,
+    required this.selectedFile,
+    required this.statusMessage,
+    required this.onFileSelected,
+  });
+
+  final List<ManagedPaletteFile> files;
+  final ManagedPaletteFile? selectedFile;
+  final String? statusMessage;
+  final ValueChanged<ManagedPaletteFile> onFileSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelFrame(
+      title: '管理区文件',
+      subtitle: '在管理区导入后，这里选择要预览的文件。',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (statusMessage != null && statusMessage!.isNotEmpty) ...[
+            _StatusText(message: statusMessage!),
+            const SizedBox(height: 8),
+          ],
+          Expanded(
+            child: files.isEmpty
+                ? const _EmptyState(
+                    title: '暂无可预览文件',
+                    description: '先到管理区导入文件后再在此选择。',
+                  )
+                : ListView.separated(
+                    itemCount: files.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final file = files[index];
+                      final selected = selectedFile?.id == file.id;
+                      final firstHex = file.palette.previewColors.isEmpty
+                          ? '#CCCCCC'
+                          : file.palette.previewColors.first.hexCode;
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          selected: selected,
+                          leading: _ColorDot(hexCode: firstHex),
+                          title: Text(
+                            file.fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${file.palette.colors.length} 色 · ${file.palette.sourceFormat.toUpperCase()}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onTap: () => onFileSelected(file),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PreviewCartSummaryPanel extends StatelessWidget {
+  const PreviewCartSummaryPanel({
+    super.key,
+    required this.cartColors,
+    required this.onRemoveColor,
+    required this.onClearPressed,
+    required this.onUseSelectedPalettePressed,
+    required this.statusMessage,
+  });
+
+  final List<ColorEntry> cartColors;
+  final ValueChanged<ColorEntry> onRemoveColor;
+  final VoidCallback onClearPressed;
+  final VoidCallback onUseSelectedPalettePressed;
+  final String? statusMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelFrame(
+      title: '导出区累计颜色',
+      subtitle: '显示已加入导出区的颜色。',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: cartColors.isEmpty ? null : onClearPressed,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('清空'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onUseSelectedPalettePressed,
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('载入当前文件'),
+                ),
+              ),
+            ],
+          ),
+          if (statusMessage != null && statusMessage!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _StatusText(message: statusMessage!),
+          ],
+          const SizedBox(height: 8),
+          Expanded(
+            child: cartColors.isEmpty
+                ? const _EmptyState(
+                    title: '导出区为空',
+                    description: '在中间预览区点选颜色加入导出区。',
+                  )
+                : ListView.separated(
+                    itemCount: cartColors.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final color = cartColors[index];
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          dense: true,
+                          leading: _ColorDot(hexCode: color.hexCode),
+                          title: Text(color.name),
+                          subtitle: Text(color.hexCode),
+                          trailing: IconButton(
+                            tooltip: '移除',
+                            icon: const Icon(Icons.remove_circle_outline),
+                            onPressed: () => onRemoveColor(color),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ExportOptionsPanel extends StatelessWidget {
+  const ExportOptionsPanel({
+    super.key,
+    required this.isBusy,
+    required this.statusMessage,
+    required this.supportedExtensions,
+    required this.sortByLightness,
+    required this.exportAsHeatmapGradient,
+    required this.heatmapSteps,
+    required this.generationKind,
+    required this.baseHex,
+    required this.secondaryHex,
+    required this.generationSteps,
+    required this.whiteTemperature,
+    required this.cartIsEmpty,
+    required this.onExportPressed,
+    required this.onSortByLightnessChanged,
+    required this.onExportAsHeatmapGradientChanged,
+    required this.onHeatmapStepsChanged,
+    required this.onGenerationKindChanged,
+    required this.onBaseHexChanged,
+    required this.onSecondaryHexChanged,
+    required this.onGenerationStepsChanged,
+    required this.onWhiteTemperatureChanged,
+    required this.onGenerateReplacePressed,
+    required this.onGenerateAppendPressed,
+  });
+
+  final bool isBusy;
+  final String? statusMessage;
+  final List<String> supportedExtensions;
+  final bool sortByLightness;
+  final bool exportAsHeatmapGradient;
+  final int heatmapSteps;
+  final PaletteGenerationKind generationKind;
+  final String baseHex;
+  final String secondaryHex;
+  final int generationSteps;
+  final WhiteTemperature whiteTemperature;
+  final bool cartIsEmpty;
+  final Future<void> Function(String extension) onExportPressed;
+  final ValueChanged<bool> onSortByLightnessChanged;
+  final ValueChanged<bool> onExportAsHeatmapGradientChanged;
+  final ValueChanged<double> onHeatmapStepsChanged;
+  final ValueChanged<PaletteGenerationKind> onGenerationKindChanged;
+  final ValueChanged<String> onBaseHexChanged;
+  final ValueChanged<String> onSecondaryHexChanged;
+  final ValueChanged<double> onGenerationStepsChanged;
+  final ValueChanged<WhiteTemperature> onWhiteTemperatureChanged;
+  final VoidCallback onGenerateReplacePressed;
+  final VoidCallback onGenerateAppendPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelFrame(
+      title: '导出选项设置',
+      subtitle: '左侧设置策略，右侧确认颜色列表。',
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _SectionCard(
+              title: '配色生成器',
+              child: Column(
+                children: [
+                  DropdownButtonFormField<PaletteGenerationKind>(
+                    initialValue: generationKind,
+                    decoration: const InputDecoration(
+                      labelText: '生成模式',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: PaletteGenerationKind.values
+                        .map(
+                          (kind) => DropdownMenuItem<PaletteGenerationKind>(
+                            value: kind,
+                            child: Text(_generationLabel(kind)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onGenerationKindChanged(value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: baseHex,
+                          onChanged: onBaseHexChanged,
+                          decoration: const InputDecoration(
+                            labelText: '基色 (HEX)',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: secondaryHex,
+                          onChanged: onSecondaryHexChanged,
+                          decoration: const InputDecoration(
+                            labelText: '第二颜色 (HEX)',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text('数量: $generationSteps'),
+                      Expanded(
+                        child: Slider(
+                          min: 2,
+                          max: 20,
+                          divisions: 18,
+                          value: generationSteps.toDouble(),
+                          label: '$generationSteps',
+                          onChanged: onGenerationStepsChanged,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (generationKind == PaletteGenerationKind.toWhite) ...[
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<WhiteTemperature>(
+                      initialValue: whiteTemperature,
+                      decoration: const InputDecoration(
+                        labelText: '白色温度',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: WhiteTemperature.values
+                          .map(
+                            (value) => DropdownMenuItem<WhiteTemperature>(
+                              value: value,
+                              child: Text(_whiteTemperatureLabel(value)),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          onWhiteTemperatureChanged(value);
+                        }
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: isBusy ? null : onGenerateReplacePressed,
+                          icon: const Icon(Icons.auto_awesome_outlined),
+                          label: const Text('替换导出区'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: isBusy ? null : onGenerateAppendPressed,
+                          icon: const Icon(Icons.add),
+                          label: const Text('追加到导出区'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            _SectionCard(
+              title: '导出策略',
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: sortByLightness,
+                    onChanged: onSortByLightnessChanged,
+                    title: const Text('按深浅排序后导出'),
+                  ),
+                  SwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: exportAsHeatmapGradient,
+                    onChanged: onExportAsHeatmapGradientChanged,
+                    title: const Text('导出渐变热图配色'),
+                  ),
+                  if (exportAsHeatmapGradient)
+                    Row(
+                      children: [
+                        Text('热图步数: $heatmapSteps'),
+                        Expanded(
+                          child: Slider(
+                            min: 2,
+                            max: 512,
+                            divisions: 510,
+                            value: heatmapSteps.toDouble(),
+                            label: '$heatmapSteps',
+                            onChanged: onHeatmapStepsChanged,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: supportedExtensions
+                  .map(
+                    (ext) => OutlinedButton(
+                      onPressed: cartIsEmpty || isBusy
+                          ? null
+                          : () => onExportPressed(ext),
+                      child: Text(ext.toUpperCase().replaceFirst('.', '')),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            if (statusMessage != null && statusMessage!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _StatusText(message: statusMessage!),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ExportColorListPanel extends StatelessWidget {
+  const ExportColorListPanel({
+    super.key,
+    required this.cartColors,
+    required this.onRemoveColor,
+    required this.onUpdateColor,
+    required this.onClearPressed,
+    required this.onUseSelectedPalettePressed,
+    required this.statusMessage,
+    required this.isBusy,
+  });
+
+  final List<ColorEntry> cartColors;
+  final ValueChanged<ColorEntry> onRemoveColor;
+  final void Function(int index, ColorEntry color) onUpdateColor;
+  final VoidCallback onClearPressed;
+  final VoidCallback onUseSelectedPalettePressed;
+  final String? statusMessage;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelFrame(
+      title: '导出颜色列表',
+      subtitle: '展示并编辑将要导出的颜色。',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: cartColors.isEmpty ? null : onClearPressed,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('清空导出区'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onUseSelectedPalettePressed,
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('载入当前文件'),
+                ),
+              ),
+              if (isBusy) ...[
+                const SizedBox(width: 8),
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ],
+            ],
+          ),
+          if (statusMessage != null && statusMessage!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _StatusText(message: statusMessage!),
+          ],
+          const SizedBox(height: 8),
+          Expanded(
+            child: cartColors.isEmpty
+                ? const _EmptyState(
+                    title: '导出区为空',
+                    description: '可从预览区点选颜色，或用左侧生成器直接生成。',
+                  )
+                : ListView.separated(
+                    itemCount: cartColors.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final color = cartColors[index];
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          leading: _ColorDot(hexCode: color.hexCode),
+                          title: Text(color.name),
+                          subtitle: Text(color.hexCode),
+                          onTap: () => _showColorEditDialog(
+                            context,
+                            index,
+                            color,
+                            onUpdateColor,
+                          ),
+                          trailing: IconButton(
+                            tooltip: '移除',
+                            icon: const Icon(Icons.remove_circle_outline),
+                            onPressed: () => onRemoveColor(color),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          if (cartColors.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 20,
+              child: Row(
+                children: cartColors
+                    .map(
+                      (color) => Expanded(
+                        child: Container(
+                          color: _parseHexColor(color.hexCode),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _showColorEditDialog(
+  BuildContext context,
+  int index,
+  ColorEntry color,
+  void Function(int index, ColorEntry color) onUpdate,
+) async {
+  final nameController = TextEditingController(text: color.name);
+  final hexController = TextEditingController(text: color.hexCode);
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('编辑导出颜色'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: '名称',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: hexController,
+              decoration: const InputDecoration(
+                labelText: 'HEX',
+                hintText: '#RRGGBB',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final normalized = _normalizeHexInput(hexController.text);
+              if (normalized == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('HEX 格式无效，请输入 #RRGGBB')),
+                );
+                return;
+              }
+              onUpdate(
+                index,
+                ColorEntry(
+                  name: nameController.text.trim().isEmpty
+                      ? 'Color ${index + 1}'
+                      : nameController.text.trim(),
+                  hexCode: normalized,
+                ),
+              );
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class _PreviewBox extends StatefulWidget {
   const _PreviewBox({
     required this.imageBytes,
     required this.profile,
@@ -752,11 +1465,65 @@ class _PreviewBox extends StatelessWidget {
   final ValueChanged<ExtractionProfile> onProfileChanged;
 
   @override
+  State<_PreviewBox> createState() => _PreviewBoxState();
+}
+
+class _PreviewBoxState extends State<_PreviewBox> {
+  Offset? _dragStart;
+  Offset? _dragCurrent;
+
+  Rect? _dragRect(double width, double height) {
+    final start = _dragStart;
+    final current = _dragCurrent;
+    if (start == null || current == null) {
+      return null;
+    }
+    return Rect.fromPoints(start, current).intersect(
+      Rect.fromLTWH(0, 0, width, height),
+    );
+  }
+
+  Rect _profileRect(double width, double height) {
+    final profile = widget.profile;
+    return Rect.fromLTWH(
+      profile.boxLeft * width,
+      profile.boxTop * height,
+      profile.boxWidth * width,
+      profile.boxHeight * height,
+    );
+  }
+
+  void _commitDragRect(double width, double height) {
+    final rect = _dragRect(width, height);
+    if (rect == null || rect.width < 8 || rect.height < 8) {
+      return;
+    }
+
+    final left = (rect.left / width).clamp(0.0, 1.0);
+    final top = (rect.top / height).clamp(0.0, 1.0);
+    final right = (rect.right / width).clamp(0.0, 1.0);
+    final bottom = (rect.bottom / height).clamp(0.0, 1.0);
+
+    widget.onProfileChanged(
+      widget.profile.copyWith(
+        mode: ExtractionMode.boxRange,
+        boxLeft: left,
+        boxTop: top,
+        boxWidth: (right - left).clamp(0.05, 1.0),
+        boxHeight: (bottom - top).clamp(0.05, 1.0),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = math.min(260.0, width * 0.72);
+        final profile = widget.profile;
+        final boxRect = _profileRect(width, height);
+        final dragRect = _dragRect(width, height);
 
         return GestureDetector(
           onTapDown: profile.mode == ExtractionMode.eyeDropper
@@ -764,12 +1531,36 @@ class _PreviewBox extends StatelessWidget {
                   final nx = (details.localPosition.dx / width).clamp(0.0, 1.0);
                   final ny =
                       (details.localPosition.dy / height).clamp(0.0, 1.0);
-                  onProfileChanged(
+                  widget.onProfileChanged(
                     profile.copyWith(
                       eyeDropperX: nx,
                       eyeDropperY: ny,
                     ),
                   );
+                }
+              : null,
+          onPanStart: profile.mode == ExtractionMode.boxRange
+              ? (details) {
+                  setState(() {
+                    _dragStart = details.localPosition;
+                    _dragCurrent = details.localPosition;
+                  });
+                }
+              : null,
+          onPanUpdate: profile.mode == ExtractionMode.boxRange
+              ? (details) {
+                  setState(() {
+                    _dragCurrent = details.localPosition;
+                  });
+                }
+              : null,
+          onPanEnd: profile.mode == ExtractionMode.boxRange
+              ? (_) {
+                  _commitDragRect(width, height);
+                  setState(() {
+                    _dragStart = null;
+                    _dragCurrent = null;
+                  });
                 }
               : null,
           child: Container(
@@ -784,9 +1575,32 @@ class _PreviewBox extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Image.memory(
-                  imageBytes,
+                  widget.imageBytes,
                   fit: BoxFit.contain,
                 ),
+                if (profile.mode == ExtractionMode.boxRange)
+                  Positioned.fromRect(
+                    rect: boxRect,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 2),
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                if (profile.mode == ExtractionMode.boxRange && dragRect != null)
+                  Positioned.fromRect(
+                    rect: dragRect,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: const Color(0xFF2563EB), width: 2),
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
                 if (profile.mode == ExtractionMode.eyeDropper)
                   Positioned(
                     left: (profile.eyeDropperX * width)
@@ -1002,13 +1816,25 @@ class _PaletteChartPreview extends StatelessWidget {
   const _PaletteChartPreview({
     required this.colors,
     required this.mode,
-    required this.colorBlindFriendly,
+    required this.visionMode,
+    required this.seriesCount,
+    required this.groupCount,
+    required this.lineWidth,
+    required this.markerSize,
+    required this.markerShape,
+    required this.alphaPercent,
     required this.isSelected,
   });
 
   final List<ColorEntry> colors;
   final PaletteChartMode mode;
-  final bool colorBlindFriendly;
+  final PalettePreviewVisionMode visionMode;
+  final int seriesCount;
+  final int groupCount;
+  final int lineWidth;
+  final int markerSize;
+  final PaletteMarkerShape markerShape;
+  final int alphaPercent;
   final bool Function(ColorEntry color) isSelected;
 
   @override
@@ -1033,7 +1859,7 @@ class _PaletteChartPreview extends StatelessWidget {
           itemBuilder: (context, index) {
             final color = colors[index];
             final selected = isSelected(color);
-            final visual = _previewColor(color.hexCode, colorBlindFriendly);
+            final visual = _previewColor(color.hexCode, visionMode);
             return ListTile(
               dense: true,
               leading: Container(
@@ -1072,7 +1898,13 @@ class _PaletteChartPreview extends StatelessWidget {
           painter: _PaletteChartPainter(
             colors: colors,
             mode: mode,
-            colorBlindFriendly: colorBlindFriendly,
+            visionMode: visionMode,
+            seriesCount: seriesCount,
+            groupCount: groupCount,
+            lineWidth: lineWidth,
+            markerSize: markerSize,
+            markerShape: markerShape,
+            alphaPercent: alphaPercent,
             isSelected: isSelected,
           ),
           child: const SizedBox.expand(),
@@ -1086,25 +1918,58 @@ class _PaletteChartPainter extends CustomPainter {
   _PaletteChartPainter({
     required this.colors,
     required this.mode,
-    required this.colorBlindFriendly,
+    required this.visionMode,
+    required this.seriesCount,
+    required this.groupCount,
+    required this.lineWidth,
+    required this.markerSize,
+    required this.markerShape,
+    required this.alphaPercent,
     required this.isSelected,
   });
 
   final List<ColorEntry> colors;
   final PaletteChartMode mode;
-  final bool colorBlindFriendly;
+  final PalettePreviewVisionMode visionMode;
+  final int seriesCount;
+  final int groupCount;
+  final int lineWidth;
+  final int markerSize;
+  final PaletteMarkerShape markerShape;
+  final int alphaPercent;
   final bool Function(ColorEntry color) isSelected;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (colors.isEmpty) {
+      return;
+    }
+
+    if (mode == PaletteChartMode.heatmap) {
+      _paintHeatmap(canvas, size);
+      return;
+    }
+    if (mode == PaletteChartMode.circular) {
+      _paintCircular(canvas, size);
+      return;
+    }
+    if (mode == PaletteChartMode.map) {
+      _paintMap(canvas, size);
+      return;
+    }
+
+    _paintStandard(canvas, size);
+  }
+
+  void _paintStandard(Canvas canvas, Size size) {
     final axis = Paint()
       ..color = Colors.grey.shade500
       ..strokeWidth = 1;
 
-    final leftPad = 20.0;
-    final bottomPad = 16.0;
-    final chartWidth = math.max(1.0, size.width - leftPad - 6);
-    final chartHeight = math.max(1.0, size.height - bottomPad - 6);
+    final leftPad = 24.0;
+    final bottomPad = 20.0;
+    final chartWidth = math.max(1.0, size.width - leftPad - 8);
+    final chartHeight = math.max(1.0, size.height - bottomPad - 10);
 
     canvas.drawLine(
       Offset(leftPad, 4),
@@ -1117,71 +1982,306 @@ class _PaletteChartPainter extends CustomPainter {
       axis,
     );
 
-    final points = <Offset>[];
-    for (var i = 0; i < colors.length; i++) {
-      final x = leftPad +
-          (chartWidth * (colors.length == 1 ? 0.5 : i / (colors.length - 1)));
-      final y =
-          chartHeight - (_luminanceOfHex(colors[i].hexCode) * chartHeight);
-      points.add(Offset(x, y));
-    }
+    final hasFocus = colors.any(isSelected);
+    final seriesTotal = math.max(1, seriesCount);
+    final pointTotal = math.max(2, groupCount);
 
-    if (mode == PaletteChartMode.bar) {
-      final width = chartWidth / colors.length;
-      for (var i = 0; i < points.length; i++) {
-        final color = _previewColor(colors[i].hexCode, colorBlindFriendly);
-        final selected = isSelected(colors[i]);
-        final barPaint = Paint()
-          ..color = color
-          ..style = PaintingStyle.fill;
-        final stroke = Paint()
-          ..color =
-              selected ? Colors.black : Colors.black.withValues(alpha: 0.2)
-          ..strokeWidth = selected ? 3 : 1
-          ..style = PaintingStyle.stroke;
-        final rect = Rect.fromLTWH(
-          points[i].dx - (width * 0.35),
-          points[i].dy,
-          width * 0.7,
-          chartHeight - points[i].dy,
+    for (var seriesIndex = 0; seriesIndex < seriesTotal; seriesIndex += 1) {
+      final values = <double>[];
+      for (var pointIndex = 0; pointIndex < pointTotal; pointIndex += 1) {
+        final base = math.sin((pointIndex + 1) * 0.8 + seriesIndex * 0.9);
+        final value = 0.48 + 0.18 * base + 0.06 * seriesIndex;
+        values.add(value.clamp(0.08, 0.92));
+      }
+
+      final points = <Offset>[];
+      for (var pointIndex = 0; pointIndex < pointTotal; pointIndex += 1) {
+        final x = leftPad +
+            (chartWidth *
+                (pointTotal == 1 ? 0.5 : pointIndex / (pointTotal - 1)));
+        final y = chartHeight - values[pointIndex] * chartHeight;
+        points.add(Offset(x, y));
+      }
+
+      final color = _effectiveSeriesColor(seriesIndex, hasFocus: hasFocus);
+      final highlighted = _isSeriesHighlighted(seriesIndex);
+
+      if (mode == PaletteChartMode.bar) {
+        final slotWidth = chartWidth / pointTotal;
+        final barWidth = math.max(6.0, slotWidth / (seriesTotal + 0.8));
+        for (var pointIndex = 0; pointIndex < pointTotal; pointIndex += 1) {
+          final left = leftPad +
+              slotWidth * pointIndex +
+              seriesIndex * barWidth -
+              (seriesTotal - 1) * barWidth / 2;
+          final top = chartHeight - values[pointIndex] * chartHeight;
+          final rect = Rect.fromLTWH(
+            left,
+            top,
+            barWidth - 2,
+            chartHeight - top,
+          );
+          canvas.drawRect(
+            rect,
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.fill,
+          );
+          if (highlighted) {
+            canvas.drawRect(
+              rect,
+              Paint()
+                ..color = Colors.black
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 2,
+            );
+          }
+        }
+        continue;
+      }
+
+      if (mode == PaletteChartMode.line) {
+        final path = Path()..moveTo(points.first.dx, points.first.dy);
+        for (var index = 1; index < points.length; index += 1) {
+          path.lineTo(points[index].dx, points[index].dy);
+        }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = color
+            ..strokeWidth = highlighted ? lineWidth + 2 : lineWidth.toDouble()
+            ..style = PaintingStyle.stroke,
         );
-        canvas.drawRect(rect, barPaint);
-        canvas.drawRect(rect, stroke);
       }
-      return;
+
+      for (final point in points) {
+        _drawMarker(
+          canvas,
+          point,
+          color,
+          highlighted: highlighted,
+        );
+      }
     }
 
-    if (mode == PaletteChartMode.line) {
-      final path = Path()..moveTo(points.first.dx, points.first.dy);
-      for (var i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
+    final axisTextPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    for (var pointIndex = 0; pointIndex < pointTotal; pointIndex += 1) {
+      final x = leftPad +
+          (chartWidth *
+              (pointTotal == 1 ? 0.5 : pointIndex / (pointTotal - 1)));
+      axisTextPainter.text = TextSpan(
+        text: '${pointIndex + 1}',
+        style: const TextStyle(fontSize: 10, color: Color(0xFF475569)),
+      );
+      axisTextPainter.layout();
+      axisTextPainter.paint(
+        canvas,
+        Offset(x - axisTextPainter.width / 2, chartHeight + 4),
+      );
+    }
+  }
+
+  void _paintHeatmap(Canvas canvas, Size size) {
+    final rows = math.max(8, math.min(18, seriesCount * 3));
+    final cols = math.max(8, math.min(18, groupCount * 3));
+    final matrixRect = Rect.fromLTWH(18, 18, size.width - 36, size.height - 42);
+    final cellW = matrixRect.width / cols;
+    final cellH = matrixRect.height / rows;
+    final hasFocus = colors.any(isSelected);
+
+    for (var row = 0; row < rows; row += 1) {
+      final base =
+          _effectiveSeriesColor(row, hasFocus: hasFocus).withAlpha(255);
+      for (var col = 0; col < cols; col += 1) {
+        final wave = 0.5 + 0.5 * math.sin((row + 1) * 0.48 + (col + 1) * 0.35);
+        final lift = 0.88 + 0.12 * wave;
+        final cellColor = Color.fromARGB(
+          255,
+          _clampChannel(255 - (255 - base.red) * lift),
+          _clampChannel(255 - (255 - base.green) * lift),
+          _clampChannel(255 - (255 - base.blue) * lift),
+        );
+        final rect = Rect.fromLTWH(
+          matrixRect.left + col * cellW,
+          matrixRect.top + row * cellH,
+          cellW,
+          cellH,
+        );
+        canvas.drawRect(
+          rect,
+          Paint()..color = cellColor,
+        );
       }
+    }
+
+    canvas.drawRect(
+      matrixRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xFFCBD5E1),
+    );
+  }
+
+  void _paintCircular(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final radius = math.min(size.width, size.height) * 0.34;
+    final rings = math.max(3, math.min(7, seriesCount));
+    final segments = math.max(colors.length, groupCount);
+    final hasFocus = colors.any(isSelected);
+
+    for (var ring = 0; ring < rings; ring += 1) {
+      final inner = radius + ring * 12;
+      final outer = inner + 10;
+      final ringRadius = (inner + outer) / 2;
+      final stroke = math.max(3.0, outer - inner);
+      final oval = Rect.fromCircle(center: center, radius: ringRadius);
+
+      for (var segment = 0; segment < segments; segment += 1) {
+        final color = _effectiveSeriesColor(segment + ring, hasFocus: hasFocus);
+        final start = -math.pi / 2 + (2 * math.pi * segment / segments);
+        final sweep = (2 * math.pi / segments) * 0.95;
+        canvas.drawArc(
+          oval,
+          start,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = stroke
+            ..strokeCap = StrokeCap.round
+            ..color = color,
+        );
+      }
+    }
+  }
+
+  void _paintMap(Canvas canvas, Size size) {
+    final content = Rect.fromLTWH(16, 12, size.width - 32, size.height - 30);
+    final hasFocus = colors.any(isSelected);
+
+    final polygons = <List<Offset>>[
+      const [
+        Offset(0.05, 0.55),
+        Offset(0.18, 0.44),
+        Offset(0.27, 0.5),
+        Offset(0.21, 0.64),
+        Offset(0.08, 0.68),
+      ],
+      const [
+        Offset(0.22, 0.44),
+        Offset(0.36, 0.32),
+        Offset(0.5, 0.38),
+        Offset(0.45, 0.54),
+        Offset(0.3, 0.58),
+      ],
+      const [
+        Offset(0.45, 0.36),
+        Offset(0.62, 0.24),
+        Offset(0.78, 0.3),
+        Offset(0.72, 0.48),
+        Offset(0.54, 0.52),
+      ],
+      const [
+        Offset(0.34, 0.58),
+        Offset(0.52, 0.52),
+        Offset(0.63, 0.62),
+        Offset(0.51, 0.76),
+        Offset(0.31, 0.74),
+      ],
+      const [
+        Offset(0.62, 0.52),
+        Offset(0.79, 0.47),
+        Offset(0.9, 0.56),
+        Offset(0.84, 0.72),
+        Offset(0.66, 0.73),
+      ],
+    ];
+
+    for (var index = 0; index < polygons.length; index += 1) {
+      final path = Path();
+      final polygon = polygons[index];
+      final color = _effectiveSeriesColor(index, hasFocus: hasFocus);
+      for (var pointIndex = 0; pointIndex < polygon.length; pointIndex += 1) {
+        final p = Offset(
+          content.left + polygon[pointIndex].dx * content.width,
+          content.top + polygon[pointIndex].dy * content.height,
+        );
+        if (pointIndex == 0) {
+          path.moveTo(p.dx, p.dy);
+        } else {
+          path.lineTo(p.dx, p.dy);
+        }
+      }
+      path.close();
+      canvas.drawPath(
+        path,
+        Paint()..color = color,
+      );
       canvas.drawPath(
         path,
         Paint()
-          ..color = Colors.black.withValues(alpha: 0.35)
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke,
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0xFF94A3B8),
       );
     }
+  }
 
-    for (var i = 0; i < points.length; i++) {
-      final color = _previewColor(colors[i].hexCode, colorBlindFriendly);
-      final selected = isSelected(colors[i]);
-      canvas.drawCircle(
-        points[i],
-        selected ? 6.5 : 4.5,
-        Paint()..color = color,
-      );
-      canvas.drawCircle(
-        points[i],
-        selected ? 6.5 : 4.5,
-        Paint()
-          ..color =
-              selected ? Colors.black : Colors.black.withValues(alpha: 0.25)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = selected ? 2.4 : 1,
-      );
+  Color _effectiveSeriesColor(int seriesIndex, {required bool hasFocus}) {
+    final colorEntry = colors[seriesIndex % colors.length];
+    final preview = _previewColor(colorEntry.hexCode, visionMode);
+    final highlighted = isSelected(colorEntry);
+    final effectiveAlpha = hasFocus && !highlighted
+        ? math.max(18, alphaPercent ~/ 3)
+        : alphaPercent;
+    return preview.withAlpha((255 * effectiveAlpha / 100).round());
+  }
+
+  bool _isSeriesHighlighted(int seriesIndex) {
+    final colorEntry = colors[seriesIndex % colors.length];
+    return isSelected(colorEntry);
+  }
+
+  void _drawMarker(
+    Canvas canvas,
+    Offset point,
+    Color color, {
+    required bool highlighted,
+  }) {
+    final radius = highlighted ? markerSize * 0.65 : markerSize * 0.5;
+    final fill = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color =
+          highlighted ? Colors.black : Colors.black.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = highlighted ? 2 : 1;
+
+    switch (markerShape) {
+      case PaletteMarkerShape.circle:
+        canvas.drawCircle(point, radius, fill);
+        canvas.drawCircle(point, radius, stroke);
+      case PaletteMarkerShape.square:
+        final rect = Rect.fromCenter(
+          center: point,
+          width: radius * 2,
+          height: radius * 2,
+        );
+        canvas.drawRect(rect, fill);
+        canvas.drawRect(rect, stroke);
+      case PaletteMarkerShape.triangle:
+        final path = Path()
+          ..moveTo(point.dx, point.dy - radius)
+          ..lineTo(point.dx - radius, point.dy + radius)
+          ..lineTo(point.dx + radius, point.dy + radius)
+          ..close();
+        canvas.drawPath(path, fill);
+        canvas.drawPath(path, stroke);
     }
   }
 
@@ -1189,7 +2289,13 @@ class _PaletteChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _PaletteChartPainter oldDelegate) {
     return oldDelegate.colors != colors ||
         oldDelegate.mode != mode ||
-        oldDelegate.colorBlindFriendly != colorBlindFriendly;
+        oldDelegate.visionMode != visionMode ||
+        oldDelegate.seriesCount != seriesCount ||
+        oldDelegate.groupCount != groupCount ||
+        oldDelegate.lineWidth != lineWidth ||
+        oldDelegate.markerSize != markerSize ||
+        oldDelegate.markerShape != markerShape ||
+        oldDelegate.alphaPercent != alphaPercent;
   }
 }
 
@@ -1448,7 +2554,7 @@ String _modeLabel(ExtractionMode mode) {
     ExtractionMode.wholeFile => '全文件',
     ExtractionMode.selectedPage => '可选页面',
     ExtractionMode.visibleRange => '展示范围',
-    ExtractionMode.boxRange => '框选区域',
+    ExtractionMode.boxRange => '框选区域（拖拽）',
     ExtractionMode.eyeDropper => '取色器',
     ExtractionMode.cameraFrame => '相机画面',
   };
@@ -1457,9 +2563,30 @@ String _modeLabel(ExtractionMode mode) {
 String _chartModeLabel(PaletteChartMode mode) {
   return switch (mode) {
     PaletteChartMode.table => '表格',
-    PaletteChartMode.scatter => '散点图',
     PaletteChartMode.line => '折线图',
     PaletteChartMode.bar => '柱状图',
+    PaletteChartMode.scatter => '散点图',
+    PaletteChartMode.heatmap => '聚类热图',
+    PaletteChartMode.circular => '环形图',
+    PaletteChartMode.map => '地图示意',
+  };
+}
+
+String _visionModeLabel(PalettePreviewVisionMode mode) {
+  return switch (mode) {
+    PalettePreviewVisionMode.normal => '普通',
+    PalettePreviewVisionMode.grayscale => '灰度',
+    PalettePreviewVisionMode.colorblindProtan => '色盲 Protan',
+    PalettePreviewVisionMode.colorblindDeutan => '色盲 Deutan',
+    PalettePreviewVisionMode.colorblindTritan => '色盲 Tritan',
+  };
+}
+
+String _markerShapeLabel(PaletteMarkerShape shape) {
+  return switch (shape) {
+    PaletteMarkerShape.circle => '圆形',
+    PaletteMarkerShape.square => '方形',
+    PaletteMarkerShape.triangle => '三角',
   };
 }
 
@@ -1491,9 +2618,9 @@ String? _normalizeHexInput(String raw) {
   return valid ? normalized.toUpperCase() : null;
 }
 
-Color _previewColor(String hexCode, bool colorBlindFriendly) {
+Color _previewColor(String hexCode, PalettePreviewVisionMode mode) {
   final raw = _parseHexColor(hexCode);
-  if (!colorBlindFriendly) {
+  if (mode == PalettePreviewVisionMode.normal) {
     return raw;
   }
 
@@ -1501,10 +2628,35 @@ Color _previewColor(String hexCode, bool colorBlindFriendly) {
   final g = raw.g.toDouble();
   final b = raw.b.toDouble();
 
-  final nr = (0.625 * r + 0.375 * g).round().clamp(0, 255);
-  final ng = (0.7 * r + 0.3 * g).round().clamp(0, 255);
-  final nb = (0.3 * g + 0.7 * b).round().clamp(0, 255);
-  return Color.fromARGB(255, nr, ng, nb);
+  if (mode == PalettePreviewVisionMode.grayscale) {
+    final gray = _clampChannel(0.299 * r + 0.587 * g + 0.114 * b);
+    return Color.fromARGB(255, gray, gray, gray);
+  }
+
+  if (mode == PalettePreviewVisionMode.colorblindProtan) {
+    return Color.fromARGB(
+      255,
+      _clampChannel(0.56667 * r + 0.43333 * g),
+      _clampChannel(0.55833 * r + 0.44167 * g),
+      _clampChannel(0.24167 * g + 0.75833 * b),
+    );
+  }
+
+  if (mode == PalettePreviewVisionMode.colorblindDeutan) {
+    return Color.fromARGB(
+      255,
+      _clampChannel(0.625 * r + 0.375 * g),
+      _clampChannel(0.7 * r + 0.3 * g),
+      _clampChannel(0.3 * g + 0.7 * b),
+    );
+  }
+
+  return Color.fromARGB(
+    255,
+    _clampChannel(0.95 * r + 0.05 * g),
+    _clampChannel(0.43333 * g + 0.56667 * b),
+    _clampChannel(0.475 * g + 0.525 * b),
+  );
 }
 
 double _luminanceOfHex(String hexCode) {
@@ -1517,4 +2669,8 @@ double _luminanceOfHex(String hexCode) {
 Color _parseHexColor(String hexCode) {
   final value = hexCode.replaceFirst('#', '').padLeft(6, '0').substring(0, 6);
   return Color(int.parse('FF$value', radix: 16));
+}
+
+int _clampChannel(num value) {
+  return value.round().clamp(0, 255).toInt();
 }
