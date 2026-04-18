@@ -7,6 +7,7 @@ import '../core/models/color_entry.dart';
 import '../core/models/extraction_profile.dart';
 import '../core/models/managed_palette_file.dart';
 import '../core/services/palette_generation_service.dart';
+import '../i18n/app_localizations.dart';
 
 enum PaletteChartMode {
   table,
@@ -65,7 +66,7 @@ class MaterialsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelFrame(
-      title: '管理区',
+      title: 'Management',
       subtitle: '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -76,7 +77,7 @@ class MaterialsPanel extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: isBusy ? null : () => onImportPressed(),
                   icon: const Icon(Icons.file_open),
-                  label: const Text('导入文件'),
+                  label: Text(context.tr('Import File')),
                 ),
               ),
               const SizedBox(width: 8),
@@ -84,7 +85,7 @@ class MaterialsPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: isBusy ? null : () => onImportCameraPressed(),
                   icon: const Icon(Icons.photo_camera_outlined),
-                  label: const Text('相机取色'),
+                  label: Text(context.tr('Camera Sampling')),
                 ),
               ),
               if (isBusy) ...[
@@ -101,11 +102,11 @@ class MaterialsPanel extends StatelessWidget {
           TextFormField(
             initialValue: searchText,
             onChanged: onSearchChanged,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: '按文件名/格式搜索',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: context.tr('Search by file name/format'),
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
@@ -114,7 +115,7 @@ class MaterialsPanel extends StatelessWidget {
             child: FilterChip(
               selected: favoritesOnly,
               onSelected: onFavoriteFilterChanged,
-              label: const Text('仅看收藏'),
+              label: Text(context.tr('Favorites Only')),
             ),
           ),
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
@@ -125,8 +126,9 @@ class MaterialsPanel extends StatelessWidget {
           Expanded(
             child: files.isEmpty
                 ? const _EmptyState(
-                    title: '还没有文件',
-                    description: '支持 JSON/CSV/GPL/CPT/ASE/PAL、图片与 PDF。',
+                    title: 'No files yet',
+                    description:
+                        'Supports JSON/CSV/GPL/CPT/ASE/PAL, images and PDF.',
                   )
                 : ListView.separated(
                     itemCount: files.length,
@@ -149,12 +151,22 @@ class MaterialsPanel extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text(
-                            '${file.palette.colors.length} 色 · ${file.palette.sourceFormat.toUpperCase()} · ${_modeLabel(file.extractionProfile.mode)} · 重采样${file.extractionRuns}次',
+                            context.tr(
+                              '{count} colors · {format} · {mode} · Re-sampled {runs} times',
+                              params: <String, String>{
+                                'count': file.palette.colors.length.toString(),
+                                'format': file.palette.sourceFormat.toUpperCase(),
+                                'mode': context.tr(_modeLabel(file.extractionProfile.mode)),
+                                'runs': file.extractionRuns.toString(),
+                              },
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           trailing: IconButton(
-                            tooltip: file.isFavorite ? '取消收藏' : '收藏',
+                            tooltip: file.isFavorite
+                                ? context.tr('Remove favorite')
+                                : context.tr('Add favorite'),
                             icon: Icon(
                               file.isFavorite ? Icons.star : Icons.star_border,
                               color: file.isFavorite
@@ -237,11 +249,11 @@ class DetailPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (file == null) {
       return _PanelFrame(
-        title: '预览区',
-        subtitle: '文件预览、取色模式、图表预览。',
+        title: 'Preview',
+        subtitle: 'File preview, sampling modes, and chart preview.',
         child: _EmptyState(
-          title: '还未选择文件',
-          description: '从左侧导入或选择文件后可进行可变数量取色。',
+          title: 'No file selected',
+          description: 'Import or select a file from the left to start sampling.',
           action: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -249,12 +261,12 @@ class DetailPanel extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: isBusy ? null : () => onImportPressed(),
                 icon: const Icon(Icons.file_open),
-                label: const Text('导入文件'),
+                label: Text(context.tr('Import File')),
               ),
               OutlinedButton.icon(
                 onPressed: isBusy ? null : () => onImportCameraPressed(),
                 icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('相机取色'),
+                label: Text(context.tr('Camera Sampling')),
               ),
             ],
           ),
@@ -263,8 +275,9 @@ class DetailPanel extends StatelessWidget {
     }
 
     return _PanelFrame(
-      title: '预览区',
-      subtitle: '支持全文件/页面/展示范围/框选/取色器/相机模式。',
+      title: 'Preview',
+      subtitle:
+          'Supports whole file/page/visible range/box selection/eyedropper/camera mode.',
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -283,13 +296,20 @@ class DetailPanel extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: isBusy ? null : () => onImportPressed(),
                   icon: const Icon(Icons.add_photo_alternate_outlined),
-                  label: const Text('导入'),
+                  label: Text(context.tr('Import')),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              '${file!.palette.colors.length} 色 · ${file!.palette.sourceFormat.toUpperCase()} · 当前模式: ${_modeLabel(file!.extractionProfile.mode)}',
+              context.tr(
+                '{count} colors · {format} · Current mode: {mode}',
+                params: <String, String>{
+                  'count': file!.palette.colors.length.toString(),
+                  'format': file!.palette.sourceFormat.toUpperCase(),
+                  'mode': context.tr(_modeLabel(file!.extractionProfile.mode)),
+                },
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 10),
@@ -313,7 +333,7 @@ class DetailPanel extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '取色结果（点选加入导出区）',
+              context.tr('Sampling results (tap to add into export cart)'),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -339,16 +359,16 @@ class DetailPanel extends StatelessWidget {
                 Expanded(
                   child: DropdownButtonFormField<PaletteChartMode>(
                     initialValue: chartMode,
-                    decoration: const InputDecoration(
-                      labelText: '预览样式',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.tr('Chart Style'),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: PaletteChartMode.values
                         .map(
                           (mode) => DropdownMenuItem<PaletteChartMode>(
                             value: mode,
-                            child: Text(_chartModeLabel(mode)),
+                            child: Text(context.tr(_chartModeLabel(mode))),
                           ),
                         )
                         .toList(growable: false),
@@ -363,16 +383,16 @@ class DetailPanel extends StatelessWidget {
                 Expanded(
                   child: DropdownButtonFormField<PalettePreviewVisionMode>(
                     initialValue: previewVisionMode,
-                    decoration: const InputDecoration(
-                      labelText: '视觉模式',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.tr('Vision Mode'),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: PalettePreviewVisionMode.values
                         .map(
                           (mode) => DropdownMenuItem<PalettePreviewVisionMode>(
                             value: mode,
-                            child: Text(_visionModeLabel(mode)),
+                            child: Text(context.tr(_visionModeLabel(mode))),
                           ),
                         )
                         .toList(growable: false),
@@ -391,16 +411,16 @@ class DetailPanel extends StatelessWidget {
                 Expanded(
                   child: DropdownButtonFormField<PaletteMarkerShape>(
                     initialValue: previewMarkerShape,
-                    decoration: const InputDecoration(
-                      labelText: '点形状',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.tr('Marker Shape'),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: PaletteMarkerShape.values
                         .map(
                           (shape) => DropdownMenuItem<PaletteMarkerShape>(
                             value: shape,
-                            child: Text(_markerShapeLabel(shape)),
+                            child: Text(context.tr(_markerShapeLabel(shape))),
                           ),
                         )
                         .toList(growable: false),
@@ -547,8 +567,9 @@ class CartPreviewPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelFrame(
-      title: '导出区',
-      subtitle: '编辑导出配色、生成方案、排序并导出科研格式。',
+      title: 'Export',
+      subtitle:
+          'Edit export palette, generate schemes, sort and export scientific formats.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -558,7 +579,7 @@ class CartPreviewPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: cartColors.isEmpty ? null : onClearPressed,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('清空导出区'),
+                  label: Text(context.tr('Clear Export Cart')),
                 ),
               ),
               const SizedBox(width: 8),
@@ -566,7 +587,7 @@ class CartPreviewPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onUseSelectedPalettePressed,
                   icon: const Icon(Icons.layers_outlined),
-                  label: const Text('载入当前文件'),
+                  label: Text(context.tr('Load Current File')),
                 ),
               ),
               if (isBusy) ...[
@@ -581,21 +602,21 @@ class CartPreviewPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _SectionCard(
-            title: '配色生成器',
+            title: 'Palette Generator',
             child: Column(
               children: [
                 DropdownButtonFormField<PaletteGenerationKind>(
                   initialValue: generationKind,
-                  decoration: const InputDecoration(
-                    labelText: '生成模式',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Generation Mode'),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   items: PaletteGenerationKind.values
                       .map(
                         (kind) => DropdownMenuItem<PaletteGenerationKind>(
                           value: kind,
-                          child: Text(_generationLabel(kind)),
+                          child: Text(context.tr(_generationLabel(kind))),
                         ),
                       )
                       .toList(growable: false),
@@ -612,9 +633,9 @@ class CartPreviewPanel extends StatelessWidget {
                       child: TextFormField(
                         initialValue: baseHex,
                         onChanged: onBaseHexChanged,
-                        decoration: const InputDecoration(
-                          labelText: '基色 (HEX)',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Base (HEX)'),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
@@ -624,9 +645,9 @@ class CartPreviewPanel extends StatelessWidget {
                       child: TextFormField(
                         initialValue: secondaryHex,
                         onChanged: onSecondaryHexChanged,
-                        decoration: const InputDecoration(
-                          labelText: '第二颜色 (HEX)',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Secondary (HEX)'),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
@@ -636,7 +657,14 @@ class CartPreviewPanel extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('数量: $generationSteps'),
+                    Text(
+                      context.tr(
+                        'Count: {count}',
+                        params: <String, String>{
+                          'count': generationSteps.toString(),
+                        },
+                      ),
+                    ),
                     Expanded(
                       child: Slider(
                         min: 2,
@@ -653,16 +681,16 @@ class CartPreviewPanel extends StatelessWidget {
                   const SizedBox(height: 4),
                   DropdownButtonFormField<WhiteTemperature>(
                     initialValue: whiteTemperature,
-                    decoration: const InputDecoration(
-                      labelText: '白色温度',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.tr('White Temperature'),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: WhiteTemperature.values
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
                             value: value,
-                            child: Text(_whiteTemperatureLabel(value)),
+                            child: Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
                         )
                         .toList(growable: false),
@@ -680,7 +708,7 @@ class CartPreviewPanel extends StatelessWidget {
                       child: FilledButton.tonalIcon(
                         onPressed: isBusy ? null : onGenerateReplacePressed,
                         icon: const Icon(Icons.auto_awesome_outlined),
-                        label: const Text('替换导出区'),
+                        label: Text(context.tr('Replace Export Cart')),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -688,7 +716,7 @@ class CartPreviewPanel extends StatelessWidget {
                       child: FilledButton.tonalIcon(
                         onPressed: isBusy ? null : onGenerateAppendPressed,
                         icon: const Icon(Icons.add),
-                        label: const Text('追加到导出区'),
+                        label: Text(context.tr('Append To Export Cart')),
                       ),
                     ),
                   ],
@@ -698,7 +726,7 @@ class CartPreviewPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _SectionCard(
-            title: '导出策略',
+            title: 'Export Strategy',
             child: Column(
               children: [
                 SwitchListTile(
@@ -706,19 +734,26 @@ class CartPreviewPanel extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   value: sortByLightness,
                   onChanged: onSortByLightnessChanged,
-                  title: const Text('按深浅排序后导出'),
+                  title: Text(context.tr('Sort by lightness before export')),
                 ),
                 SwitchListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   value: exportAsHeatmapGradient,
                   onChanged: onExportAsHeatmapGradientChanged,
-                  title: const Text('导出渐变热图配色'),
+                  title: Text(context.tr('Export as heatmap gradient')),
                 ),
                 if (exportAsHeatmapGradient)
                   Row(
                     children: [
-                      Text('热图步数: $heatmapSteps'),
+                      Text(
+                        context.tr(
+                          'Heatmap Steps: {count}',
+                          params: <String, String>{
+                            'count': heatmapSteps.toString(),
+                          },
+                        ),
+                      ),
                       Expanded(
                         child: Slider(
                           min: 2,
@@ -757,8 +792,9 @@ class CartPreviewPanel extends StatelessWidget {
           Expanded(
             child: cartColors.isEmpty
                 ? const _EmptyState(
-                    title: '导出区为空',
-                    description: '可从预览区点选颜色，或用上方生成器直接生成。',
+                    title: 'Export cart is empty',
+                    description:
+                        'Pick colors from preview, or generate from the top panel.',
                   )
                 : ListView.separated(
                     itemCount: cartColors.length,
@@ -779,7 +815,7 @@ class CartPreviewPanel extends StatelessWidget {
                             onUpdateColor,
                           ),
                           trailing: IconButton(
-                            tooltip: '移除',
+                            tooltip: context.tr('Remove'),
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () => onRemoveColor(color),
                           ),
@@ -823,14 +859,14 @@ class CartPreviewPanel extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('编辑导出颜色'),
+          title: Text(context.tr('Edit Export Color')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: '名称',
+                decoration: InputDecoration(
+                  labelText: context.tr('Name'),
                 ),
               ),
               const SizedBox(height: 8),
@@ -846,14 +882,18 @@ class CartPreviewPanel extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
+              child: Text(context.tr('Cancel')),
             ),
             FilledButton(
               onPressed: () {
                 final normalized = _normalizeHexInput(hexController.text);
                 if (normalized == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('HEX 格式无效，请输入 #RRGGBB')),
+                    SnackBar(
+                      content: Text(
+                        context.tr('Invalid HEX format, please input #RRGGBB'),
+                      ),
+                    ),
                   );
                   return;
                 }
@@ -868,7 +908,7 @@ class CartPreviewPanel extends StatelessWidget {
                 );
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('保存'),
+              child: Text(context.tr('Save')),
             ),
           ],
         );
@@ -897,11 +937,11 @@ class PreviewCanvasPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (file == null) {
       return _PanelFrame(
-        title: '文件预览',
+        title: 'File Preview',
         subtitle: '',
         child: _EmptyState(
-          title: '未选择文件',
-          description: '先导入或选择文件',
+          title: 'No file selected',
+          description: 'Import or select a file first',
           action: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -909,12 +949,12 @@ class PreviewCanvasPanel extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: isBusy ? null : () => onImportPressed(),
                 icon: const Icon(Icons.file_open),
-                label: const Text('导入文件'),
+                label: Text(context.tr('Import File')),
               ),
               OutlinedButton.icon(
                 onPressed: isBusy ? null : () => onImportCameraPressed(),
                 icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('相机取色'),
+                label: Text(context.tr('Camera Sampling')),
               ),
             ],
           ),
@@ -923,7 +963,7 @@ class PreviewCanvasPanel extends StatelessWidget {
     }
 
     return _PanelFrame(
-      title: '文件预览',
+      title: 'File Preview',
       subtitle: '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -940,7 +980,13 @@ class PreviewCanvasPanel extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${file!.palette.colors.length} 色 · ${file!.palette.sourceFormat.toUpperCase()}',
+                context.tr(
+                  '{count} colors · {format}',
+                  params: <String, String>{
+                    'count': file!.palette.colors.length.toString(),
+                    'format': file!.palette.sourceFormat.toUpperCase(),
+                  },
+                ),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -949,8 +995,8 @@ class PreviewCanvasPanel extends StatelessWidget {
           Expanded(
             child: file!.previewBytes == null
                 ? const _EmptyState(
-                    title: '无预览图像',
-                    description: '当前文件暂不支持图像预览',
+                    title: 'No preview image',
+                    description: 'Current file does not support image preview',
                   )
                 : _PreviewBox(
                     imageBytes: file!.previewBytes!,
@@ -1035,22 +1081,22 @@ class PreviewInspectorPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (file == null) {
       return _PanelFrame(
-        title: '预览控制',
+        title: 'Preview Controls',
         subtitle: '',
         child: const _EmptyState(
-          title: '未选择文件',
-          description: '选择文件后可配置取色与预览',
+          title: 'No file selected',
+          description: 'Configure sampling and preview after selecting a file',
         ),
       );
     }
 
     return _PanelFrame(
-      title: '预览控制',
+      title: 'Preview Controls',
       subtitle: '',
       child: ListView(
         children: [
           _FoldCard(
-            title: '取色配置',
+            title: 'Sampling Settings',
             expanded: configExpanded,
             onExpandedChanged: onConfigExpandedChanged,
             child: _ExtractionControls(
@@ -1067,7 +1113,7 @@ class PreviewInspectorPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: '取色结果',
+            title: 'Sampling Results',
             expanded: resultExpanded,
             onExpandedChanged: onResultExpandedChanged,
             child: Wrap(
@@ -1089,7 +1135,7 @@ class PreviewInspectorPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: '预览效果',
+            title: 'Preview Effects',
             expanded: effectExpanded,
             onExpandedChanged: onEffectExpandedChanged,
             child: Column(
@@ -1100,16 +1146,16 @@ class PreviewInspectorPanel extends StatelessWidget {
                     Expanded(
                       child: DropdownButtonFormField<PaletteChartMode>(
                         initialValue: chartMode,
-                        decoration: const InputDecoration(
-                          labelText: '预览样式',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Chart Style'),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                         items: PaletteChartMode.values
                             .map(
                               (mode) => DropdownMenuItem<PaletteChartMode>(
                                 value: mode,
-                                child: Text(_chartModeLabel(mode)),
+                                child: Text(context.tr(_chartModeLabel(mode))),
                               ),
                             )
                             .toList(growable: false),
@@ -1124,9 +1170,9 @@ class PreviewInspectorPanel extends StatelessWidget {
                     Expanded(
                       child: DropdownButtonFormField<PalettePreviewVisionMode>(
                         initialValue: previewVisionMode,
-                        decoration: const InputDecoration(
-                          labelText: '视觉模式',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Vision Mode'),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                         items: PalettePreviewVisionMode.values
@@ -1134,7 +1180,7 @@ class PreviewInspectorPanel extends StatelessWidget {
                               (mode) =>
                                   DropdownMenuItem<PalettePreviewVisionMode>(
                                 value: mode,
-                                child: Text(_visionModeLabel(mode)),
+                                child: Text(context.tr(_visionModeLabel(mode))),
                               ),
                             )
                             .toList(growable: false),
@@ -1150,16 +1196,16 @@ class PreviewInspectorPanel extends StatelessWidget {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<PaletteMarkerShape>(
                   initialValue: previewMarkerShape,
-                  decoration: const InputDecoration(
-                    labelText: '点形状',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Marker Shape'),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   items: PaletteMarkerShape.values
                       .map(
                         (shape) => DropdownMenuItem<PaletteMarkerShape>(
                           value: shape,
-                          child: Text(_markerShapeLabel(shape)),
+                          child: Text(context.tr(_markerShapeLabel(shape))),
                         ),
                       )
                       .toList(growable: false),
@@ -1248,6 +1294,8 @@ class _FoldCard extends StatelessWidget {
   final ValueChanged<bool> onExpandedChanged;
   final Widget child;
 
+  static const Duration _kAnimationDuration = Duration(milliseconds: 220);
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1267,23 +1315,43 @@ class _FoldCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      title,
+                      context.tr(title),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
-                  Icon(
-                    expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 20,
+                  AnimatedRotation(
+                    duration: _kAnimationDuration,
+                    curve: Curves.easeOutCubic,
+                    turns: expanded ? 0.5 : 0,
+                    child: const Icon(
+                      Icons.expand_more,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-              child: child,
+          ClipRect(
+            child: AnimatedAlign(
+              duration: _kAnimationDuration,
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.topCenter,
+              heightFactor: expanded ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !expanded,
+                child: AnimatedOpacity(
+                  duration: _kAnimationDuration,
+                  curve: Curves.easeInOutCubic,
+                  opacity: expanded ? 1 : 0,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                    child: child,
+                  ),
+                ),
+              ),
             ),
+          ),
         ],
       ),
     );
@@ -1307,7 +1375,7 @@ class PreviewSourcePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelFrame(
-      title: '管理区文件',
+      title: 'Managed Files',
       subtitle: '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1319,8 +1387,9 @@ class PreviewSourcePanel extends StatelessWidget {
           Expanded(
             child: files.isEmpty
                 ? const _EmptyState(
-                    title: '暂无可预览文件',
-                    description: '先到管理区导入文件后再在此选择。',
+                    title: 'No files available for preview',
+                    description:
+                        'Import files in Management first, then select here.',
                   )
                 : ListView.separated(
                     itemCount: files.length,
@@ -1343,7 +1412,13 @@ class PreviewSourcePanel extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text(
-                            '${file.palette.colors.length} 色 · ${file.palette.sourceFormat.toUpperCase()}',
+                            context.tr(
+                              '{count} colors · {format}',
+                              params: <String, String>{
+                                'count': file.palette.colors.length.toString(),
+                                'format': file.palette.sourceFormat.toUpperCase(),
+                              },
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1378,7 +1453,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelFrame(
-      title: '导出区累计颜色',
+      title: 'Export Cart Colors',
       subtitle: '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1389,7 +1464,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: cartColors.isEmpty ? null : onClearPressed,
                   icon: const Icon(Icons.delete_outline),
-                  label: const Text('清空'),
+                  label: Text(context.tr('Clear')),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1397,7 +1472,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onUseSelectedPalettePressed,
                   icon: const Icon(Icons.layers_outlined),
-                  label: const Text('载入当前文件'),
+                  label: Text(context.tr('Load Current File')),
                 ),
               ),
             ],
@@ -1410,8 +1485,9 @@ class PreviewCartSummaryPanel extends StatelessWidget {
           Expanded(
             child: cartColors.isEmpty
                 ? const _EmptyState(
-                    title: '导出区为空',
-                    description: '在中间预览区点选颜色加入导出区。',
+                    title: 'Export cart is empty',
+                    description:
+                        'Tap colors in the middle preview to add to export cart.',
                   )
                 : ListView.separated(
                     itemCount: cartColors.length,
@@ -1427,7 +1503,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                           title: Text(color.name),
                           subtitle: Text(color.hexCode),
                           trailing: IconButton(
-                            tooltip: '移除',
+                            tooltip: context.tr('Remove'),
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () => onRemoveColor(color),
                           ),
@@ -1448,6 +1524,8 @@ class ExportOptionsPanel extends StatelessWidget {
     required this.isBusy,
     required this.statusMessage,
     required this.supportedExtensions,
+    required this.selectedExtension,
+    required this.exportFileName,
     required this.sortByLightness,
     required this.exportAsHeatmapGradient,
     required this.heatmapSteps,
@@ -1459,13 +1537,17 @@ class ExportOptionsPanel extends StatelessWidget {
     required this.cartIsEmpty,
     required this.colorCandidates,
     required this.isBaseColorPicking,
+    required this.isSecondaryColorPicking,
     required this.formatExpanded,
     required this.generatorExpanded,
     required this.strategyExpanded,
     required this.onBaseColorFieldPressed,
+    required this.onSecondaryColorFieldPressed,
     required this.onFormatExpandedChanged,
     required this.onGeneratorExpandedChanged,
     required this.onStrategyExpandedChanged,
+    required this.onSelectedExtensionChanged,
+    required this.onExportFileNameChanged,
     required this.onExportPressed,
     required this.onSortByLightnessChanged,
     required this.onExportAsHeatmapGradientChanged,
@@ -1482,6 +1564,8 @@ class ExportOptionsPanel extends StatelessWidget {
   final bool isBusy;
   final String? statusMessage;
   final List<String> supportedExtensions;
+  final String selectedExtension;
+  final String exportFileName;
   final bool sortByLightness;
   final bool exportAsHeatmapGradient;
   final int heatmapSteps;
@@ -1493,14 +1577,18 @@ class ExportOptionsPanel extends StatelessWidget {
   final bool cartIsEmpty;
   final List<ColorEntry> colorCandidates;
   final bool isBaseColorPicking;
+  final bool isSecondaryColorPicking;
   final bool formatExpanded;
   final bool generatorExpanded;
   final bool strategyExpanded;
   final VoidCallback onBaseColorFieldPressed;
+  final VoidCallback onSecondaryColorFieldPressed;
   final ValueChanged<bool> onFormatExpandedChanged;
   final ValueChanged<bool> onGeneratorExpandedChanged;
   final ValueChanged<bool> onStrategyExpandedChanged;
-  final Future<void> Function(String extension) onExportPressed;
+  final ValueChanged<String?> onSelectedExtensionChanged;
+  final ValueChanged<String> onExportFileNameChanged;
+  final Future<void> Function() onExportPressed;
   final ValueChanged<bool> onSortByLightnessChanged;
   final ValueChanged<bool> onExportAsHeatmapGradientChanged;
   final ValueChanged<double> onHeatmapStepsChanged;
@@ -1512,68 +1600,82 @@ class ExportOptionsPanel extends StatelessWidget {
   final VoidCallback onGenerateReplacePressed;
   final VoidCallback onGenerateAppendPressed;
 
-  String? _resolveCandidateHex(List<ColorEntry> candidates, String hex) {
-    final target = hex.trim().toUpperCase();
-    for (final candidate in candidates) {
-      if (candidate.hexCode.toUpperCase() == target) {
-        return candidate.hexCode.toUpperCase();
-      }
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final uniqueCandidates = <String, ColorEntry>{
       for (final color in colorCandidates) color.hexCode.toUpperCase(): color,
     }.values.toList(growable: false);
 
-    final secondarySelection =
-        _resolveCandidateHex(uniqueCandidates, secondaryHex);
-
     return _PanelFrame(
-      title: '导出选项设置',
+      title: 'Export Options',
       subtitle: '',
       child: ListView(
         children: [
           _FoldCard(
-            title: '导出格式',
+            title: 'Export File Settings',
             expanded: formatExpanded,
             onExpandedChanged: onFormatExpandedChanged,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: supportedExtensions
-                  .map(
-                    (ext) => OutlinedButton(
-                      onPressed: cartIsEmpty || isBusy
-                          ? null
-                          : () => onExportPressed(ext),
-                      child: Text(ext.toUpperCase().replaceFirst('.', '')),
-                    ),
-                  )
-                  .toList(growable: false),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  initialValue: exportFileName,
+                  onChanged: onExportFileNameChanged,
+                  decoration: InputDecoration(
+                    labelText: context.tr('Export File Name'),
+                    hintText: context.tr('Example: My Palette'),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedExtension,
+                  decoration: InputDecoration(
+                    labelText: context.tr('Export Format'),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: supportedExtensions
+                      .map(
+                        (extension) => DropdownMenuItem<String>(
+                          value: extension,
+                          child: Text(
+                            extension.toUpperCase().replaceFirst('.', ''),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: isBusy ? null : onSelectedExtensionChanged,
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: cartIsEmpty || isBusy ? null : onExportPressed,
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(context.tr('Export File')),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: '配色生成器',
+            title: 'Palette Generator',
             expanded: generatorExpanded,
             onExpandedChanged: onGeneratorExpandedChanged,
             child: Column(
               children: [
                 DropdownButtonFormField<PaletteGenerationKind>(
                   initialValue: generationKind,
-                  decoration: const InputDecoration(
-                    labelText: '生成模式',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('Generation Mode'),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   items: PaletteGenerationKind.values
                       .map(
                         (kind) => DropdownMenuItem<PaletteGenerationKind>(
                           value: kind,
-                          child: Text(_generationLabel(kind)),
+                          child: Text(context.tr(_generationLabel(kind))),
                         ),
                       )
                       .toList(growable: false),
@@ -1585,15 +1687,15 @@ class ExportOptionsPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (uniqueCandidates.isEmpty)
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('先在右侧导出颜色列表中添加颜色'),
+                    child: Text(context.tr('Add colors to the export list first')),
                   ),
                 Row(
                   children: [
                     Expanded(
                       child: _PickHexField(
-                        label: '基色',
+                        label: 'Base',
                         hexCode: baseHex,
                         active: isBaseColorPicking,
                         enabled: uniqueCandidates.isNotEmpty,
@@ -1602,45 +1704,42 @@ class ExportOptionsPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: uniqueCandidates.isEmpty
-                            ? null
-                            : secondarySelection,
-                        decoration: const InputDecoration(
-                          labelText: '第二颜色',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        items: uniqueCandidates
-                            .map(
-                              (color) => DropdownMenuItem<String>(
-                                value: color.hexCode.toUpperCase(),
-                                child: Text('${color.name} ${color.hexCode}'),
-                              ),
-                            )
-                            .toList(growable: false),
-                        onChanged: uniqueCandidates.isEmpty
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  onSecondaryHexChanged(value);
-                                }
-                              },
+                      child: _PickHexField(
+                        label: 'Secondary',
+                        hexCode: secondaryHex,
+                        active: isSecondaryColorPicking,
+                        enabled: uniqueCandidates.isNotEmpty,
+                        onTap: onSecondaryColorFieldPressed,
                       ),
                     ),
                   ],
                 ),
-                if (isBaseColorPicking) ...[
+                if (isBaseColorPicking || isSecondaryColorPicking) ...[
                   const SizedBox(height: 6),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('已进入基色点选：点击右侧颜色列表中的颜色即可应用'),
+                    child: Text(
+                      isBaseColorPicking
+                          ? context.tr(
+                              'Base color pick mode: tap a color in the right export list to apply',
+                            )
+                          : context.tr(
+                              'Secondary color pick mode: tap a color in the right export list to apply',
+                            ),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('数量: $generationSteps'),
+                    Text(
+                      context.tr(
+                        'Count: {count}',
+                        params: <String, String>{
+                          'count': generationSteps.toString(),
+                        },
+                      ),
+                    ),
                     Expanded(
                       child: Slider(
                         min: 2,
@@ -1657,16 +1756,16 @@ class ExportOptionsPanel extends StatelessWidget {
                   const SizedBox(height: 4),
                   DropdownButtonFormField<WhiteTemperature>(
                     initialValue: whiteTemperature,
-                    decoration: const InputDecoration(
-                      labelText: '白色温度',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.tr('White Temperature'),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     items: WhiteTemperature.values
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
                             value: value,
-                            child: Text(_whiteTemperatureLabel(value)),
+                            child: Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
                         )
                         .toList(growable: false),
@@ -1684,7 +1783,7 @@ class ExportOptionsPanel extends StatelessWidget {
                       child: FilledButton.tonalIcon(
                         onPressed: isBusy ? null : onGenerateReplacePressed,
                         icon: const Icon(Icons.auto_awesome_outlined),
-                        label: const Text('替换导出区'),
+                        label: Text(context.tr('Replace Export Cart')),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1692,7 +1791,7 @@ class ExportOptionsPanel extends StatelessWidget {
                       child: FilledButton.tonalIcon(
                         onPressed: isBusy ? null : onGenerateAppendPressed,
                         icon: const Icon(Icons.add),
-                        label: const Text('追加到导出区'),
+                        label: Text(context.tr('Append To Export Cart')),
                       ),
                     ),
                   ],
@@ -1702,7 +1801,7 @@ class ExportOptionsPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: '导出策略',
+            title: 'Export Strategy',
             expanded: strategyExpanded,
             onExpandedChanged: onStrategyExpandedChanged,
             child: Column(
@@ -1712,19 +1811,26 @@ class ExportOptionsPanel extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   value: sortByLightness,
                   onChanged: onSortByLightnessChanged,
-                  title: const Text('按深浅排序后导出'),
+                  title: Text(context.tr('Sort by lightness before export')),
                 ),
                 SwitchListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   value: exportAsHeatmapGradient,
                   onChanged: onExportAsHeatmapGradientChanged,
-                  title: const Text('导出渐变热图配色'),
+                  title: Text(context.tr('Export as heatmap gradient')),
                 ),
                 if (exportAsHeatmapGradient)
                   Row(
                     children: [
-                      Text('热图步数: $heatmapSteps'),
+                      Text(
+                        context.tr(
+                          'Heatmap Steps: {count}',
+                          params: <String, String>{
+                            'count': heatmapSteps.toString(),
+                          },
+                        ),
+                      ),
                       Expanded(
                         child: Slider(
                           min: 2,
@@ -1857,6 +1963,15 @@ class ExportColorListPanel extends StatelessWidget {
     required this.isBusy,
     required this.selectedIndex,
     required this.isBaseColorPicking,
+    required this.isSecondaryColorPicking,
+    required this.listExpanded,
+    required this.previewExpanded,
+    required this.previewFileName,
+    required this.previewContent,
+    required this.previewExtension,
+    required this.previewError,
+    required this.onListExpandedChanged,
+    required this.onPreviewExpandedChanged,
     required this.onSelectedIndexChanged,
     required this.onAddManualColorPressed,
   });
@@ -1870,13 +1985,23 @@ class ExportColorListPanel extends StatelessWidget {
   final bool isBusy;
   final int? selectedIndex;
   final bool isBaseColorPicking;
+  final bool isSecondaryColorPicking;
+  final bool listExpanded;
+  final bool previewExpanded;
+  final String previewFileName;
+  final String previewContent;
+  final String previewExtension;
+  final String? previewError;
+  final ValueChanged<bool> onListExpandedChanged;
+  final ValueChanged<bool> onPreviewExpandedChanged;
   final ValueChanged<int> onSelectedIndexChanged;
   final Future<void> Function() onAddManualColorPressed;
 
   @override
   Widget build(BuildContext context) {
+    final listPanelHeight = cartColors.length > 10 ? 360.0 : 280.0;
     return _PanelFrame(
-      title: '导出颜色列表',
+      title: 'Export Content & Preview',
       subtitle: '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1888,17 +2013,17 @@ class ExportColorListPanel extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: cartColors.isEmpty ? null : onClearPressed,
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('清空导出区'),
+                label: Text(context.tr('Clear Export Cart')),
               ),
               OutlinedButton.icon(
                 onPressed: onUseSelectedPalettePressed,
                 icon: const Icon(Icons.layers_outlined),
-                label: const Text('载入当前文件'),
+                label: Text(context.tr('Load Current File')),
               ),
               FilledButton.tonalIcon(
                 onPressed: isBusy ? null : () => onAddManualColorPressed(),
                 icon: const Icon(Icons.add_circle_outline),
-                label: const Text('手动添加颜色'),
+                label: Text(context.tr('Add Color Manually')),
               ),
               if (isBusy)
                 const SizedBox(
@@ -1912,7 +2037,7 @@ class ExportColorListPanel extends StatelessWidget {
             const SizedBox(height: 8),
             _StatusText(message: statusMessage!),
           ],
-          if (isBaseColorPicking) ...[
+          if (isBaseColorPicking || isSecondaryColorPicking) ...[
             const SizedBox(height: 8),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -1925,69 +2050,370 @@ class ExportColorListPanel extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Text('基色点选中：点击下方任一颜色即可设为基色'),
+                child: Text(
+                  isBaseColorPicking
+                      ? context.tr(
+                          'Base color picking: tap any color below to set as base',
+                        )
+                      : context.tr(
+                          'Secondary color picking: tap any color below to set as secondary',
+                        ),
+                ),
               ),
             ),
           ],
           const SizedBox(height: 8),
           Expanded(
-            child: cartColors.isEmpty
-                ? const _EmptyState(
-                    title: '导出区为空',
-                    description: '可从预览区点选颜色，或用左侧生成器直接生成。',
-                  )
-                : ListView.separated(
-                    itemCount: cartColors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemBuilder: (context, index) {
-                      final color = cartColors[index];
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        clipBehavior: Clip.antiAlias,
-                        child: ListTile(
-                          selected: selectedIndex == index,
-                          leading: _ColorDot(hexCode: color.hexCode),
-                          title: Text(color.name),
-                          subtitle: Text(color.hexCode),
-                          onTap: () => onSelectedIndexChanged(index),
-                          onLongPress: () => _showColorEditDialog(
-                            context,
-                            index,
-                            color,
-                            onUpdateColor,
+            child: ListView(
+              children: [
+                _FoldCard(
+                  title: 'Export Color List',
+                  expanded: listExpanded,
+                  onExpandedChanged: onListExpandedChanged,
+                  child: SizedBox(
+                    height: listPanelHeight,
+                    child: cartColors.isEmpty
+                        ? const _EmptyState(
+                            title: 'Export cart is empty',
+                            description:
+                                'Pick colors from preview, or generate from the left panel.',
+                          )
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: ListView.separated(
+                                  itemCount: cartColors.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 4),
+                                  itemBuilder: (context, index) {
+                                    final color = cartColors[index];
+                                    return Card(
+                                      margin: EdgeInsets.zero,
+                                      clipBehavior: Clip.antiAlias,
+                                      child: ListTile(
+                                        selected: selectedIndex == index,
+                                        leading: _ColorDot(hexCode: color.hexCode),
+                                        title: Text(color.name),
+                                        subtitle: Text(color.hexCode),
+                                        onTap: () => onSelectedIndexChanged(index),
+                                        onLongPress: () => _showColorEditDialog(
+                                          context,
+                                          index,
+                                          color,
+                                          onUpdateColor,
+                                        ),
+                                        trailing: IconButton(
+                                          tooltip: context.tr('Remove'),
+                                          icon: const Icon(
+                                            Icons.remove_circle_outline,
+                                          ),
+                                          onPressed: () => onRemoveColor(color),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 20,
+                                child: Row(
+                                  children: cartColors
+                                      .map(
+                                        (color) => Expanded(
+                                          child: Container(
+                                            color: _parseHexColor(color.hexCode),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                ),
+                              ),
+                            ],
                           ),
-                          trailing: IconButton(
-                            tooltip: '移除',
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () => onRemoveColor(color),
-                          ),
-                        ),
-                      );
-                    },
                   ),
-          ),
-          if (cartColors.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 20,
-              child: Row(
-                children: cartColors
-                    .map(
-                      (color) => Expanded(
-                        child: Container(
-                          color: _parseHexColor(color.hexCode),
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
+                ),
+                const SizedBox(height: 8),
+                _FoldCard(
+                  title: 'Export File Content Preview',
+                  expanded: previewExpanded,
+                  onExpandedChanged: onPreviewExpandedChanged,
+                  child: SizedBox(
+                    height: 320,
+                    child: _ExportFilePreview(
+                      fileName: previewFileName,
+                      extension: previewExtension,
+                      content: previewContent,
+                      errorMessage: previewError,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
+  }
+}
+
+class _ExportFilePreview extends StatelessWidget {
+  const _ExportFilePreview({
+    required this.fileName,
+    required this.extension,
+    required this.content,
+    this.errorMessage,
+  });
+
+  static final RegExp _tokenPattern = RegExp(
+    r'#(?:[0-9A-Fa-f]{6})\b|"(?:[^"\\]|\\.)*"|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?|[{}\[\]:,]|[A-Za-z_][A-Za-z0-9_\.]*',
+  );
+  static final RegExp _hexPattern = RegExp(r'^#(?:[0-9A-Fa-f]{6})$');
+  static final RegExp _numberPattern = RegExp(r'^-?\d+(?:\.\d+)?$');
+  static final RegExp _keywordPattern = RegExp(r'^(?:true|false|null)$');
+  static final RegExp _punctuationPattern = RegExp(r'^[{}\[\]:,]$');
+
+  final String fileName;
+  final String extension;
+  final String content;
+  final String? errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final appScheme = Theme.of(context).colorScheme;
+    final darkScheme = ColorScheme.fromSeed(
+      seedColor: appScheme.primary,
+      brightness: Brightness.dark,
+    );
+
+    if (errorMessage != null && errorMessage!.trim().isNotEmpty) {
+      return _buildPreviewContainer(
+        darkScheme: darkScheme,
+        child: Center(
+          child: Text(
+            errorMessage!,
+            style: TextStyle(color: darkScheme.error),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final normalizedContent = content.trim();
+    if (normalizedContent.isEmpty) {
+      return _buildPreviewContainer(
+        darkScheme: darkScheme,
+        child: Center(
+          child: Text(
+            context.tr('Export cart is empty, or current format cannot be previewed.'),
+            style: TextStyle(color: darkScheme.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final lines = normalizedContent.split('\n');
+    final visibleLines = lines.length > 240 ? lines.sublist(0, 240) : lines;
+    final clipped = lines.length > visibleLines.length;
+
+    final codeSpans = <InlineSpan>[];
+    final baseStyle = TextStyle(
+      color: darkScheme.onSurface,
+      fontFamily: 'monospace',
+      fontSize: 12,
+      height: 1.45,
+    );
+
+    for (var index = 0; index < visibleLines.length; index++) {
+      final line = visibleLines[index];
+      codeSpans.add(
+        TextSpan(
+          text: '${(index + 1).toString().padLeft(3, ' ')}  ',
+          style: baseStyle.copyWith(color: darkScheme.outline),
+        ),
+      );
+      codeSpans.addAll(_highlightLine(line, baseStyle, darkScheme));
+      if (index != visibleLines.length - 1) {
+        codeSpans.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    if (clipped) {
+      codeSpans
+        ..add(const TextSpan(text: '\n'))
+        ..add(
+          TextSpan(
+            text: '... preview truncated ...',
+            style: baseStyle.copyWith(color: darkScheme.outline),
+          ),
+        );
+    }
+
+    return _buildPreviewContainer(
+      darkScheme: darkScheme,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: darkScheme.surfaceContainer,
+              border: Border(
+                bottom: BorderSide(color: darkScheme.outlineVariant),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.description_outlined, color: darkScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: darkScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: darkScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    extension.toUpperCase().replaceFirst('.', ''),
+                    style: TextStyle(
+                      color: darkScheme.onPrimaryContainer,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: SelectableText.rich(
+                TextSpan(style: baseStyle, children: codeSpans),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewContainer({
+    required ColorScheme darkScheme,
+    required Widget child,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: darkScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: darkScheme.outlineVariant),
+      ),
+      child: child,
+    );
+  }
+
+  List<InlineSpan> _highlightLine(
+    String line,
+    TextStyle baseStyle,
+    ColorScheme darkScheme,
+  ) {
+    final spans = <InlineSpan>[];
+    final commentLine = line.trimLeft().startsWith('#');
+    var cursor = 0;
+
+    for (final match in _tokenPattern.allMatches(line)) {
+      if (match.start > cursor) {
+        spans.add(
+          TextSpan(
+            text: line.substring(cursor, match.start),
+            style: commentLine
+                ? baseStyle.copyWith(color: darkScheme.outline)
+                : baseStyle,
+          ),
+        );
+      }
+
+      final token = match.group(0)!;
+      spans.add(
+        TextSpan(
+          text: token,
+          style: _styleForToken(
+            token,
+            baseStyle,
+            darkScheme,
+            commentLine: commentLine,
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+
+    if (cursor < line.length) {
+      spans.add(
+        TextSpan(
+          text: line.substring(cursor),
+          style: commentLine
+              ? baseStyle.copyWith(color: darkScheme.outline)
+              : baseStyle,
+        ),
+      );
+    }
+
+    return spans;
+  }
+
+  TextStyle _styleForToken(
+    String token,
+    TextStyle baseStyle,
+    ColorScheme darkScheme, {
+    required bool commentLine,
+  }) {
+    if (_hexPattern.hasMatch(token)) {
+      final color = _parseHexColor(token);
+      return baseStyle.copyWith(
+        color: color,
+        fontWeight: FontWeight.w700,
+        backgroundColor: color.withValues(alpha: 0.2),
+      );
+    }
+
+    if (commentLine) {
+      return baseStyle.copyWith(color: darkScheme.outline);
+    }
+
+    if (token.startsWith('"')) {
+      return baseStyle.copyWith(color: darkScheme.tertiary);
+    }
+    if (_keywordPattern.hasMatch(token)) {
+      return baseStyle.copyWith(color: darkScheme.primary);
+    }
+    if (_numberPattern.hasMatch(token)) {
+      return baseStyle.copyWith(color: darkScheme.secondary);
+    }
+    if (_punctuationPattern.hasMatch(token)) {
+      return baseStyle.copyWith(color: darkScheme.outline);
+    }
+    if (token.toUpperCase() == token && token.length > 1) {
+      return baseStyle.copyWith(color: darkScheme.primary);
+    }
+
+    return baseStyle.copyWith(color: darkScheme.onSurfaceVariant);
   }
 }
 
@@ -2004,14 +2430,14 @@ Future<void> _showColorEditDialog(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        title: const Text('编辑导出颜色'),
+        title: Text(context.tr('Edit Export Color')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: '名称',
+              decoration: InputDecoration(
+                labelText: context.tr('Name'),
               ),
             ),
             const SizedBox(height: 8),
@@ -2027,14 +2453,18 @@ Future<void> _showColorEditDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(context.tr('Cancel')),
           ),
           FilledButton(
             onPressed: () {
               final normalized = _normalizeHexInput(hexController.text);
               if (normalized == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('HEX 格式无效，请输入 #RRGGBB')),
+                  SnackBar(
+                    content: Text(
+                      context.tr('Invalid HEX format, please input #RRGGBB'),
+                    ),
+                  ),
                 );
                 return;
               }
@@ -2049,7 +2479,7 @@ Future<void> _showColorEditDialog(
               );
               Navigator.of(dialogContext).pop();
             },
-            child: const Text('保存'),
+            child: Text(context.tr('Save')),
           ),
         ],
       );
@@ -2274,16 +2704,16 @@ class _ExtractionControls extends StatelessWidget {
       children: [
         DropdownButtonFormField<ExtractionMode>(
           initialValue: profile.mode,
-          decoration: const InputDecoration(
-            labelText: '取色模式',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.tr('Sampling Mode'),
+            border: const OutlineInputBorder(),
             isDense: true,
           ),
           items: ExtractionMode.values
               .map(
                 (mode) => DropdownMenuItem<ExtractionMode>(
                   value: mode,
-                  child: Text(_modeLabel(mode)),
+                  child: Text(context.tr(_modeLabel(mode))),
                 ),
               )
               .toList(growable: false),
@@ -2295,7 +2725,10 @@ class _ExtractionControls extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _LabeledSlider(
-          label: '取色数量: ${profile.sampleCount}',
+          label: context.tr(
+            'Sampling count: {count}',
+            params: <String, String>{'count': profile.sampleCount.toString()},
+          ),
           value: profile.sampleCount.toDouble(),
           min: 1,
           max: 256,
@@ -2309,7 +2742,7 @@ class _ExtractionControls extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('页码'),
+              Text(context.tr('Page')),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: profile.pageIndex <= 1
@@ -2332,7 +2765,12 @@ class _ExtractionControls extends StatelessWidget {
         if (profile.mode == ExtractionMode.visibleRange) ...[
           const SizedBox(height: 8),
           _LabeledSlider(
-            label: '展示范围比例: ${profile.visibleRangeFactor.toStringAsFixed(2)}',
+            label: context.tr(
+              'Visible range factor: {factor}',
+              params: <String, String>{
+                'factor': profile.visibleRangeFactor.toStringAsFixed(2),
+              },
+            ),
             value: profile.visibleRangeFactor,
             min: 0.1,
             max: 1.0,
@@ -2345,7 +2783,12 @@ class _ExtractionControls extends StatelessWidget {
         if (profile.mode == ExtractionMode.boxRange) ...[
           const SizedBox(height: 8),
           _LabeledSlider(
-            label: '框选左边界: ${profile.boxLeft.toStringAsFixed(2)}',
+            label: context.tr(
+              'Box left: {value}',
+              params: <String, String>{
+                'value': profile.boxLeft.toStringAsFixed(2),
+              },
+            ),
             value: profile.boxLeft,
             min: 0,
             max: 1,
@@ -2354,7 +2797,12 @@ class _ExtractionControls extends StatelessWidget {
                 onProfileChanged(profile.copyWith(boxLeft: value)),
           ),
           _LabeledSlider(
-            label: '框选上边界: ${profile.boxTop.toStringAsFixed(2)}',
+            label: context.tr(
+              'Box top: {value}',
+              params: <String, String>{
+                'value': profile.boxTop.toStringAsFixed(2),
+              },
+            ),
             value: profile.boxTop,
             min: 0,
             max: 1,
@@ -2363,7 +2811,12 @@ class _ExtractionControls extends StatelessWidget {
                 onProfileChanged(profile.copyWith(boxTop: value)),
           ),
           _LabeledSlider(
-            label: '框选宽度: ${profile.boxWidth.toStringAsFixed(2)}',
+            label: context.tr(
+              'Box width: {value}',
+              params: <String, String>{
+                'value': profile.boxWidth.toStringAsFixed(2),
+              },
+            ),
             value: profile.boxWidth,
             min: 0.05,
             max: 1,
@@ -2372,7 +2825,12 @@ class _ExtractionControls extends StatelessWidget {
                 onProfileChanged(profile.copyWith(boxWidth: value)),
           ),
           _LabeledSlider(
-            label: '框选高度: ${profile.boxHeight.toStringAsFixed(2)}',
+            label: context.tr(
+              'Box height: {value}',
+              params: <String, String>{
+                'value': profile.boxHeight.toStringAsFixed(2),
+              },
+            ),
             value: profile.boxHeight,
             min: 0.05,
             max: 1,
@@ -2384,7 +2842,12 @@ class _ExtractionControls extends StatelessWidget {
         if (profile.mode == ExtractionMode.eyeDropper) ...[
           const SizedBox(height: 8),
           _LabeledSlider(
-            label: '取色器 X: ${profile.eyeDropperX.toStringAsFixed(2)}',
+            label: context.tr(
+              'Eyedropper X: {value}',
+              params: <String, String>{
+                'value': profile.eyeDropperX.toStringAsFixed(2),
+              },
+            ),
             value: profile.eyeDropperX,
             min: 0,
             max: 1,
@@ -2393,7 +2856,12 @@ class _ExtractionControls extends StatelessWidget {
                 onProfileChanged(profile.copyWith(eyeDropperX: value)),
           ),
           _LabeledSlider(
-            label: '取色器 Y: ${profile.eyeDropperY.toStringAsFixed(2)}',
+            label: context.tr(
+              'Eyedropper Y: {value}',
+              params: <String, String>{
+                'value': profile.eyeDropperY.toStringAsFixed(2),
+              },
+            ),
             value: profile.eyeDropperY,
             min: 0,
             max: 1,
@@ -2410,19 +2878,19 @@ class _ExtractionControls extends StatelessWidget {
             FilledButton.tonalIcon(
               onPressed: isBusy ? null : () => onReextractPressed(),
               icon: const Icon(Icons.refresh),
-              label: const Text('执行取色'),
+              label: Text(context.tr('Run Sampling')),
             ),
             OutlinedButton.icon(
               onPressed: isBusy ? null : onSaveProfilePressed,
               icon: const Icon(Icons.save_alt_outlined),
-              label: const Text('保存方案'),
+              label: Text(context.tr('Save Profile')),
             ),
             OutlinedButton.icon(
               onPressed: isBusy || !hasSavedProfile
                   ? null
                   : () => onApplySavedProfilePressed(),
               icon: const Icon(Icons.settings_backup_restore),
-              label: const Text('应用已保存方案'),
+              label: Text(context.tr('Apply Saved Profile')),
             ),
           ],
         ),
@@ -2434,7 +2902,7 @@ class _ExtractionControls extends StatelessWidget {
     }
 
     return _SectionCard(
-      title: '取色配置',
+      title: 'Sampling Settings',
       child: content,
     );
   }
@@ -2469,8 +2937,8 @@ class _PaletteChartPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     if (colors.isEmpty) {
       return const _EmptyState(
-        title: '无可视化数据',
-        description: '请先进行取色。',
+        title: 'No visual data',
+        description: 'Please run sampling first.',
       );
     }
 
@@ -2949,7 +3417,7 @@ class _SectionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              context.tr(title),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -3021,10 +3489,13 @@ class _PanelFrame extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(context.tr(title), style: Theme.of(context).textTheme.titleMedium),
             if (subtitle.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                context.tr(subtitle),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
             const SizedBox(height: 10),
             Expanded(child: child),
@@ -3161,10 +3632,10 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            Text(context.tr(title), style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Text(
-              description,
+              context.tr(description),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -3181,60 +3652,60 @@ class _EmptyState extends StatelessWidget {
 
 String _modeLabel(ExtractionMode mode) {
   return switch (mode) {
-    ExtractionMode.wholeFile => '全文件',
-    ExtractionMode.selectedPage => '可选页面',
-    ExtractionMode.visibleRange => '展示范围',
-    ExtractionMode.boxRange => '框选区域（拖拽）',
-    ExtractionMode.eyeDropper => '取色器',
-    ExtractionMode.cameraFrame => '相机画面',
+    ExtractionMode.wholeFile => 'Whole File',
+    ExtractionMode.selectedPage => 'Selected Page',
+    ExtractionMode.visibleRange => 'Visible Range',
+    ExtractionMode.boxRange => 'Box Range (Drag)',
+    ExtractionMode.eyeDropper => 'Eyedropper',
+    ExtractionMode.cameraFrame => 'Camera Frame',
   };
 }
 
 String _chartModeLabel(PaletteChartMode mode) {
   return switch (mode) {
-    PaletteChartMode.table => '表格',
-    PaletteChartMode.line => '折线图',
-    PaletteChartMode.bar => '柱状图',
-    PaletteChartMode.scatter => '散点图',
-    PaletteChartMode.heatmap => '聚类热图',
-    PaletteChartMode.circular => '环形图',
-    PaletteChartMode.map => '地图示意',
+    PaletteChartMode.table => 'Table',
+    PaletteChartMode.line => 'Line Chart',
+    PaletteChartMode.bar => 'Bar Chart',
+    PaletteChartMode.scatter => 'Scatter Plot',
+    PaletteChartMode.heatmap => 'Clustered Heatmap',
+    PaletteChartMode.circular => 'Circular Chart',
+    PaletteChartMode.map => 'Map View',
   };
 }
 
 String _visionModeLabel(PalettePreviewVisionMode mode) {
   return switch (mode) {
-    PalettePreviewVisionMode.normal => '普通',
-    PalettePreviewVisionMode.grayscale => '灰度',
-    PalettePreviewVisionMode.colorblindProtan => '色盲 Protan',
-    PalettePreviewVisionMode.colorblindDeutan => '色盲 Deutan',
-    PalettePreviewVisionMode.colorblindTritan => '色盲 Tritan',
+    PalettePreviewVisionMode.normal => 'Normal',
+    PalettePreviewVisionMode.grayscale => 'Grayscale',
+    PalettePreviewVisionMode.colorblindProtan => 'Colorblind Protan',
+    PalettePreviewVisionMode.colorblindDeutan => 'Colorblind Deutan',
+    PalettePreviewVisionMode.colorblindTritan => 'Colorblind Tritan',
   };
 }
 
 String _markerShapeLabel(PaletteMarkerShape shape) {
   return switch (shape) {
-    PaletteMarkerShape.circle => '圆形',
-    PaletteMarkerShape.square => '方形',
-    PaletteMarkerShape.triangle => '三角',
+    PaletteMarkerShape.circle => 'Circle',
+    PaletteMarkerShape.square => 'Square',
+    PaletteMarkerShape.triangle => 'Triangle',
   };
 }
 
 String _generationLabel(PaletteGenerationKind kind) {
   return switch (kind) {
-    PaletteGenerationKind.twoColorGradient => '双色渐变',
-    PaletteGenerationKind.heatmap => '热图配色',
-    PaletteGenerationKind.analogous => '近似色',
-    PaletteGenerationKind.complementary => '互补色',
-    PaletteGenerationKind.toWhite => '到白色渐变',
+    PaletteGenerationKind.twoColorGradient => 'Two-Color Gradient',
+    PaletteGenerationKind.heatmap => 'Heatmap Palette',
+    PaletteGenerationKind.analogous => 'Analogous',
+    PaletteGenerationKind.complementary => 'Complementary',
+    PaletteGenerationKind.toWhite => 'Gradient to White',
   };
 }
 
 String _whiteTemperatureLabel(WhiteTemperature value) {
   return switch (value) {
-    WhiteTemperature.warm => '暖白',
-    WhiteTemperature.neutral => '中性白',
-    WhiteTemperature.cool => '冷白',
+    WhiteTemperature.warm => 'Warm White',
+    WhiteTemperature.neutral => 'Neutral White',
+    WhiteTemperature.cool => 'Cool White',
   };
 }
 

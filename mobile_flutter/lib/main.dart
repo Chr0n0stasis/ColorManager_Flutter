@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'src/core/branding/upstream_branding.dart';
+import 'src/i18n/app_localizations.dart';
 import 'src/ui/main_shell.dart';
 
 void main() {
@@ -19,6 +21,7 @@ class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
   ThemeMode _themeMode = ThemeMode.system;
   Color _themeSeedColor = const Color(0xFF1D4ED8);
   bool _useMaterialDynamicColor = false;
+  AppLanguagePreference _languagePreference = AppLanguagePreference.system;
 
   void _setThemeMode(ThemeMode mode) {
     setState(() {
@@ -36,6 +39,20 @@ class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
     setState(() {
       _useMaterialDynamicColor = enabled;
     });
+  }
+
+  void _setLanguagePreference(AppLanguagePreference preference) {
+    setState(() {
+      _languagePreference = preference;
+    });
+  }
+
+  Locale? get _localeOverride {
+    return switch (_languagePreference) {
+      AppLanguagePreference.system => null,
+      AppLanguagePreference.zhCn => AppLocalizations.zhCnLocale,
+      AppLanguagePreference.enUs => AppLocalizations.enUsLocale,
+    };
   }
 
   @override
@@ -61,7 +78,22 @@ class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: '$appDisplayName $appVersion',
+          onGenerateTitle: (context) =>
+              AppLocalizations.of(context).tr(appDisplayName),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: _localeOverride,
+          localeResolutionCallback: (systemLocale, _) {
+            if (_languagePreference != AppLanguagePreference.system) {
+              return _localeOverride;
+            }
+            return AppLocalizations.resolveSystemLocale(systemLocale);
+          },
           themeMode: _themeMode,
           theme: ThemeData(
             colorScheme: lightScheme,
@@ -79,6 +111,8 @@ class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
             useMaterialDynamicColor: _useMaterialDynamicColor,
             onUseMaterialDynamicColorChanged: _setUseMaterialDynamicColor,
             materialDynamicColorAvailable: hasDynamicColor,
+            languagePreference: _languagePreference,
+            onLanguagePreferenceChanged: _setLanguagePreference,
           ),
         );
       },

@@ -10,6 +10,7 @@ import '../core/models/managed_palette_file.dart';
 import '../core/models/palette.dart';
 import '../core/services/palette_generation_service.dart';
 import '../core/services/palette_import_service.dart';
+import '../i18n/app_localizations.dart';
 import 'layout_contract.dart';
 import 'panels.dart';
 
@@ -30,6 +31,8 @@ class MainShell extends StatefulWidget {
     required this.useMaterialDynamicColor,
     required this.onUseMaterialDynamicColorChanged,
     required this.materialDynamicColorAvailable,
+    required this.languagePreference,
+    required this.onLanguagePreferenceChanged,
   });
 
   final ThemeMode themeMode;
@@ -39,6 +42,8 @@ class MainShell extends StatefulWidget {
   final bool useMaterialDynamicColor;
   final ValueChanged<bool> onUseMaterialDynamicColorChanged;
   final bool materialDynamicColorAvailable;
+  final AppLanguagePreference languagePreference;
+  final ValueChanged<AppLanguagePreference> onLanguagePreferenceChanged;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -49,7 +54,6 @@ class _MainShellState extends State<MainShell> {
   final PaletteGenerationService _generationService =
       const PaletteGenerationService();
 
-  late final List<String> _statusRotationMessages;
   Timer? _statusRotationTimer;
   int _statusRotationIndex = 0;
 
@@ -84,19 +88,24 @@ class _MainShellState extends State<MainShell> {
   bool _sortByLightness = false;
   bool _exportAsHeatmapGradient = false;
   int _heatmapSteps = 32;
+  String _selectedExportExtension = '.json';
+  String _exportFileName = 'Cart Palette';
 
   bool _autoThemeColor = true;
 
   int? _selectedExportColorIndex;
   bool _isPickingBaseColor = false;
+  bool _isPickingSecondaryColor = false;
 
   bool _previewConfigExpanded = true;
-  bool _previewResultExpanded = true;
+  bool _previewResultExpanded = false;
   bool _previewEffectExpanded = false;
 
   bool _exportFormatExpanded = true;
   bool _exportGeneratorExpanded = true;
   bool _exportStrategyExpanded = false;
+  bool _exportColorListExpanded = true;
+  bool _exportPreviewExpanded = false;
 
   static const List<Color> _themeColorPresets = <Color>[
     Color(0xFF1D4ED8),
@@ -110,14 +119,16 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
-    _statusRotationMessages = buildStatusRotationMessages();
+    final supported = _importService.supportedExportExtensions;
+    if (supported.isNotEmpty) {
+      _selectedExportExtension = supported.first;
+    }
     _statusRotationTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (!mounted || _statusRotationMessages.isEmpty) {
+      if (!mounted) {
         return;
       }
       setState(() {
-        _statusRotationIndex =
-            (_statusRotationIndex + 1) % _statusRotationMessages.length;
+        _statusRotationIndex = (_statusRotationIndex + 1) % 3;
       });
     });
   }
@@ -128,12 +139,37 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
+  String _tr(
+    String key, {
+    Map<String, String> params = const <String, String>{},
+  }) {
+    return _l10n.tr(key, params: params);
+  }
+
   String get _statusWatermarkMessage {
-    if (_statusRotationMessages.isEmpty) {
-      return nonCommercialNotice;
+    final rotation = _statusRotationIndex % 3;
+    if (rotation == 0) {
+      return _tr(
+        'Ver {version} | Author: {author} | {tagline}',
+        params: <String, String>{
+          'version': appVersion,
+          'author': appAuthor,
+          'tagline': _tr(appTagline),
+        },
+      );
     }
-    return _statusRotationMessages[
-        _statusRotationIndex % _statusRotationMessages.length];
+    if (rotation == 1) {
+      return _tr(
+        'Ver {version} | {message}',
+        params: <String, String>{
+          'version': appVersion,
+          'message': _tr(antiResaleMessage),
+        },
+      );
+    }
+    return _tr(nonCommercialNotice);
   }
 
   List<ManagedPaletteFile> get _filteredFiles {
@@ -175,7 +211,7 @@ class _MainShellState extends State<MainShell> {
   Future<void> _importFile() async {
     setState(() {
       _isBusy = true;
-      _statusMessage = 'Importing file...';
+      _statusMessage = _tr('Importing file...');
     });
 
     try {
@@ -186,7 +222,7 @@ class _MainShellState extends State<MainShell> {
 
       if (result == null) {
         setState(() {
-          _statusMessage = 'Import canceled.';
+          _statusMessage = _tr('Import canceled.');
           _isBusy = false;
         });
         return;
@@ -208,8 +244,13 @@ class _MainShellState extends State<MainShell> {
         _files.insert(0, record);
         _selectedFile = record;
         _syncExportPaletteFromColors(record.palette.colors);
-        _statusMessage =
-            'Imported ${result.fileName} (${result.palette.colors.length} colors).';
+        _statusMessage = _tr(
+          'Imported {fileName} ({count} colors).',
+          params: <String, String>{
+            'fileName': result.fileName,
+            'count': result.palette.colors.length.toString(),
+          },
+        );
         _isBusy = false;
       });
 
@@ -220,7 +261,10 @@ class _MainShellState extends State<MainShell> {
       }
 
       setState(() {
-        _statusMessage = 'Import failed: $error';
+        _statusMessage = _tr(
+          'Import failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
         _isBusy = false;
       });
     }
@@ -229,14 +273,14 @@ class _MainShellState extends State<MainShell> {
   Future<void> _importFromCamera() async {
     if (!_importService.canCaptureFromCamera) {
       setState(() {
-        _statusMessage = _importService.cameraCaptureDisabledReason;
+        _statusMessage = _tr(_importService.cameraCaptureDisabledReason);
       });
       return;
     }
 
     setState(() {
       _isBusy = true;
-      _statusMessage = 'Capturing camera frame...';
+      _statusMessage = _tr('Capturing camera frame...');
     });
 
     try {
@@ -247,7 +291,7 @@ class _MainShellState extends State<MainShell> {
 
       if (result == null) {
         setState(() {
-          _statusMessage = 'Camera capture canceled.';
+          _statusMessage = _tr('Camera capture canceled.');
           _isBusy = false;
         });
         return;
@@ -269,8 +313,12 @@ class _MainShellState extends State<MainShell> {
         _files.insert(0, record);
         _selectedFile = record;
         _syncExportPaletteFromColors(record.palette.colors);
-        _statusMessage =
-            'Captured camera frame (${result.palette.colors.length} colors).';
+        _statusMessage = _tr(
+          'Captured camera frame ({count} colors).',
+          params: <String, String>{
+            'count': result.palette.colors.length.toString(),
+          },
+        );
         _isBusy = false;
       });
 
@@ -281,7 +329,10 @@ class _MainShellState extends State<MainShell> {
       }
       setState(() {
         _isBusy = false;
-        _statusMessage = 'Camera import failed: $error';
+        _statusMessage = _tr(
+          'Camera import failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
       });
     }
   }
@@ -289,8 +340,13 @@ class _MainShellState extends State<MainShell> {
   void _selectFile(ManagedPaletteFile file) {
     setState(() {
       _selectedFile = file;
-      _statusMessage =
-          'Selected ${file.palette.name} (${file.palette.colors.length} colors).';
+      _statusMessage = _tr(
+        'Selected {paletteName} ({count} colors).',
+        params: <String, String>{
+          'paletteName': file.palette.name,
+          'count': file.palette.colors.length.toString(),
+        },
+      );
     });
     _applyAutoThemeSeedFromContext();
   }
@@ -315,8 +371,8 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _isBusy = true;
       _statusMessage = file.isFavorite
-          ? 'Removing favorite...'
-          : 'Saving favorite backup...';
+          ? _tr('Removing favorite...')
+          : _tr('Saving favorite backup...');
     });
 
     try {
@@ -328,7 +384,10 @@ class _MainShellState extends State<MainShell> {
         );
         _replaceRecord(updated);
         setState(() {
-          _statusMessage = 'Removed ${updated.fileName} from favorites.';
+          _statusMessage = _tr(
+            'Removed {fileName} from favorites.',
+            params: <String, String>{'fileName': updated.fileName},
+          );
           _isBusy = false;
         });
         return;
@@ -345,13 +404,21 @@ class _MainShellState extends State<MainShell> {
       );
       _replaceRecord(updated);
       setState(() {
-        _statusMessage =
-            'Added ${updated.fileName} to favorites and backed up to favorate/$backupName';
+        _statusMessage = _tr(
+          'Added {fileName} to favorites and backed up to favorate/{backupName}',
+          params: <String, String>{
+            'fileName': updated.fileName,
+            'backupName': backupName,
+          },
+        );
         _isBusy = false;
       });
     } catch (error) {
       setState(() {
-        _statusMessage = 'Favorite backup failed: $error';
+        _statusMessage = _tr(
+          'Favorite backup failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
         _isBusy = false;
       });
     }
@@ -362,11 +429,17 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       if (_exportColorKeys.remove(key)) {
         _exportColors.removeWhere((item) => _colorKey(item) == key);
-        _statusMessage = 'Removed ${color.hexCode} from cart.';
+        _statusMessage = _tr(
+          'Removed {hexCode} from cart.',
+          params: <String, String>{'hexCode': color.hexCode},
+        );
       } else {
         _exportColorKeys.add(key);
         _exportColors.add(color);
-        _statusMessage = 'Added ${color.hexCode} to cart.';
+        _statusMessage = _tr(
+          'Added {hexCode} to cart.',
+          params: <String, String>{'hexCode': color.hexCode},
+        );
       }
       _selectedExportColorIndex = null;
     });
@@ -379,7 +452,10 @@ class _MainShellState extends State<MainShell> {
       _exportColorKeys.remove(key);
       _exportColors.removeWhere((item) => _colorKey(item) == key);
       _selectedExportColorIndex = null;
-      _statusMessage = 'Removed ${color.hexCode} from cart.';
+      _statusMessage = _tr(
+        'Removed {hexCode} from cart.',
+        params: <String, String>{'hexCode': color.hexCode},
+      );
     });
     _applyAutoThemeSeedFromContext();
   }
@@ -391,7 +467,10 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _exportColors[index] = color;
       _rebuildExportKeys();
-      _statusMessage = 'Updated ${color.name}.';
+      _statusMessage = _tr(
+        'Updated {name}.',
+        params: <String, String>{'name': color.name},
+      );
     });
     _applyAutoThemeSeedFromContext();
   }
@@ -404,20 +483,20 @@ class _MainShellState extends State<MainShell> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('手动添加颜色'),
+          title: Text(_tr('Add Color Manually')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: '名称'),
+                decoration: InputDecoration(labelText: _tr('Name')),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: hexController,
-                decoration: const InputDecoration(
-                  labelText: 'HEX',
-                  hintText: '#RRGGBB',
+                decoration: InputDecoration(
+                  labelText: _tr('HEX'),
+                  hintText: _tr('#RRGGBB'),
                 ),
               ),
             ],
@@ -425,14 +504,16 @@ class _MainShellState extends State<MainShell> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
+              child: Text(_tr('Cancel')),
             ),
             FilledButton(
               onPressed: () {
                 final normalized = _normalizeHexInput(hexController.text);
                 if (normalized == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('HEX 格式无效，请输入 #RRGGBB')),
+                    SnackBar(
+                      content: Text(_tr('Invalid HEX format, please input #RRGGBB')),
+                    ),
                   );
                   return;
                 }
@@ -446,7 +527,7 @@ class _MainShellState extends State<MainShell> {
                   ),
                 );
               },
-              child: const Text('添加'),
+              child: Text(_tr('Add')),
             ),
           ],
         );
@@ -461,7 +542,10 @@ class _MainShellState extends State<MainShell> {
       _exportColors.add(added);
       _rebuildExportKeys();
       _selectedExportColorIndex = _exportColors.length - 1;
-      _statusMessage = 'Added ${added.hexCode} to cart.';
+      _statusMessage = _tr(
+        'Added {hexCode} to cart.',
+        params: <String, String>{'hexCode': added.hexCode},
+      );
     });
 
     _applyAutoThemeSeedFromContext();
@@ -473,7 +557,8 @@ class _MainShellState extends State<MainShell> {
       _exportColors.clear();
       _selectedExportColorIndex = null;
       _isPickingBaseColor = false;
-      _statusMessage = 'Cart cleared.';
+      _isPickingSecondaryColor = false;
+      _statusMessage = _tr('Cart cleared.');
     });
   }
 
@@ -483,12 +568,28 @@ class _MainShellState extends State<MainShell> {
     }
 
     setState(() {
+      final color = _exportColors[index];
       if (_isPickingBaseColor) {
-        final color = _exportColors[index];
         _baseHex = color.hexCode.toUpperCase();
         _selectedExportColorIndex = index;
         _isPickingBaseColor = false;
-        _statusMessage = 'Base color set to ${color.hexCode}.';
+        _isPickingSecondaryColor = false;
+        _statusMessage = _tr(
+          'Base color set to {hexCode}.',
+          params: <String, String>{'hexCode': color.hexCode},
+        );
+        return;
+      }
+
+      if (_isPickingSecondaryColor) {
+        _secondaryHex = color.hexCode.toUpperCase();
+        _selectedExportColorIndex = index;
+        _isPickingSecondaryColor = false;
+        _isPickingBaseColor = false;
+        _statusMessage = _tr(
+          'Secondary color set to {hexCode}.',
+          params: <String, String>{'hexCode': color.hexCode},
+        );
         return;
       }
 
@@ -503,16 +604,40 @@ class _MainShellState extends State<MainShell> {
   void _toggleBaseColorPicking() {
     if (_exportColors.isEmpty) {
       setState(() {
-        _statusMessage = 'Add colors to the export list first.';
+        _statusMessage = _tr('Add colors to the export list first.');
       });
       return;
     }
 
     setState(() {
-      _isPickingBaseColor = !_isPickingBaseColor;
+      final enabling = !_isPickingBaseColor;
+      _isPickingBaseColor = enabling;
+      if (enabling) {
+        _isPickingSecondaryColor = false;
+      }
       _statusMessage = _isPickingBaseColor
-          ? 'Base color pick mode on: tap a color in the export list.'
-          : 'Base color pick canceled.';
+          ? _tr('Base color pick mode on: tap a color in the export list.')
+          : _tr('Base color pick canceled.');
+    });
+  }
+
+  void _toggleSecondaryColorPicking() {
+    if (_exportColors.isEmpty) {
+      setState(() {
+        _statusMessage = _tr('Add colors to the export list first.');
+      });
+      return;
+    }
+
+    setState(() {
+      final enabling = !_isPickingSecondaryColor;
+      _isPickingSecondaryColor = enabling;
+      if (enabling) {
+        _isPickingBaseColor = false;
+      }
+      _statusMessage = _isPickingSecondaryColor
+          ? _tr('Secondary color pick mode on: tap a color in the export list.')
+          : _tr('Secondary color pick canceled.');
     });
   }
 
@@ -520,7 +645,7 @@ class _MainShellState extends State<MainShell> {
     final current = _selectedFile;
     if (current == null) {
       setState(() {
-        _statusMessage = 'Select a file first.';
+        _statusMessage = _tr('Select a file first.');
       });
       return;
     }
@@ -528,27 +653,65 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _syncExportPaletteFromColors(current.palette.colors);
       _selectedExportColorIndex = null;
-      _statusMessage = 'Loaded current file colors into export cart.';
+      _statusMessage = _tr('Loaded current file colors into export cart.');
     });
     _applyAutoThemeSeedFromContext();
   }
 
-  Future<void> _exportPalette(String extension) async {
+  String get _effectiveExportFileName {
+    var rawName = _exportFileName.trim();
+    if (rawName.isEmpty) {
+      rawName = _selectedFile?.palette.name.trim() ?? '';
+    }
+    if (rawName.isEmpty) {
+      rawName = 'Cart Palette';
+    }
+
+    for (final extension in _importService.supportedExportExtensions) {
+      if (rawName.toLowerCase().endsWith(extension)) {
+        rawName = rawName.substring(0, rawName.length - extension.length).trim();
+        break;
+      }
+    }
+    return rawName.isEmpty ? 'Cart Palette' : rawName;
+  }
+
+  PaletteExportPayload _buildCurrentExportPayload() {
+    final palette = Palette(
+      name: _effectiveExportFileName,
+      colors: List<ColorEntry>.from(_exportColors),
+      sourceFormat: _selectedExportExtension.replaceFirst('.', ''),
+    );
+
+    return _importService.buildExportPayload(
+      palette: palette,
+      extension: _selectedExportExtension,
+      sortByLightness: _sortByLightness,
+      exportAsHeatmapGradient: _exportAsHeatmapGradient,
+      heatmapSteps: _heatmapSteps,
+    );
+  }
+
+  Future<void> _exportPalette() async {
+    final extension = _selectedExportExtension;
     if (_exportColors.isEmpty) {
       setState(() {
-        _statusMessage = 'Cart is empty. Add colors before export.';
+        _statusMessage = _tr('Cart is empty. Add colors before export.');
       });
       return;
     }
 
     setState(() {
       _isBusy = true;
-      _statusMessage = 'Exporting $extension...';
+      _statusMessage = _tr(
+        'Exporting {extension}...',
+        params: <String, String>{'extension': extension},
+      );
     });
 
     try {
       final palette = Palette(
-        name: _selectedFile?.palette.name ?? 'Cart Palette',
+        name: _effectiveExportFileName,
         colors: List<ColorEntry>.from(_exportColors),
         sourceFormat: extension.replaceFirst('.', ''),
       );
@@ -567,7 +730,10 @@ class _MainShellState extends State<MainShell> {
 
       setState(() {
         _isBusy = false;
-        _statusMessage = 'Exported to ${output.path}';
+        _statusMessage = _tr(
+          'Exported to {path}',
+          params: <String, String>{'path': output.path},
+        );
       });
     } catch (error) {
       if (!mounted) {
@@ -576,7 +742,10 @@ class _MainShellState extends State<MainShell> {
 
       setState(() {
         _isBusy = false;
-        _statusMessage = 'Export failed: $error';
+        _statusMessage = _tr(
+          'Export failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
       });
     }
   }
@@ -598,7 +767,7 @@ class _MainShellState extends State<MainShell> {
 
     setState(() {
       _isBusy = true;
-      _statusMessage = 'Re-extracting colors...';
+      _statusMessage = _tr('Re-extracting colors...');
     });
 
     try {
@@ -626,8 +795,13 @@ class _MainShellState extends State<MainShell> {
         _syncExportPaletteFromColors(updated.palette.colors);
         _selectedExportColorIndex = null;
         _isBusy = false;
-        _statusMessage =
-            'Re-extracted ${updated.palette.colors.length} colors from ${updated.fileName}.';
+        _statusMessage = _tr(
+          'Re-extracted {count} colors from {fileName}.',
+          params: <String, String>{
+            'count': updated.palette.colors.length.toString(),
+            'fileName': updated.fileName,
+          },
+        );
       });
 
       _applyAutoThemeSeedFromContext();
@@ -637,7 +811,10 @@ class _MainShellState extends State<MainShell> {
       }
       setState(() {
         _isBusy = false;
-        _statusMessage = 'Re-extract failed: $error';
+        _statusMessage = _tr(
+          'Re-extract failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
       });
     }
   }
@@ -650,7 +827,10 @@ class _MainShellState extends State<MainShell> {
 
     _replaceRecord(current.copyWith(savedProfile: current.extractionProfile));
     setState(() {
-      _statusMessage = 'Saved extraction profile for ${current.fileName}.';
+      _statusMessage = _tr(
+        'Saved extraction profile for {fileName}.',
+        params: <String, String>{'fileName': current.fileName},
+      );
     });
   }
 
@@ -658,7 +838,7 @@ class _MainShellState extends State<MainShell> {
     final current = _selectedFile;
     if (current == null || current.savedProfile == null) {
       setState(() {
-        _statusMessage = 'No saved profile for current file.';
+        _statusMessage = _tr('No saved profile for current file.');
       });
       return;
     }
@@ -737,6 +917,7 @@ class _MainShellState extends State<MainShell> {
   void _setSecondaryHex(String value) {
     setState(() {
       _secondaryHex = value;
+      _isPickingSecondaryColor = false;
     });
   }
 
@@ -761,6 +942,39 @@ class _MainShellState extends State<MainShell> {
   void _setHeatmapSteps(double value) {
     setState(() {
       _heatmapSteps = value.round().clamp(2, 512);
+    });
+  }
+
+  void _setSelectedExportExtension(String? extension) {
+    if (extension == null || extension.trim().isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectedExportExtension = extension;
+    });
+  }
+
+  void _setExportFileName(String value) {
+    setState(() {
+      _exportFileName = value;
+    });
+  }
+
+  void _setExportColorListExpanded(bool expanded) {
+    setState(() {
+      _exportColorListExpanded = expanded;
+      if (expanded) {
+        _exportPreviewExpanded = false;
+      }
+    });
+  }
+
+  void _setExportPreviewExpanded(bool expanded) {
+    setState(() {
+      _exportPreviewExpanded = expanded;
+      if (expanded) {
+        _exportColorListExpanded = false;
+      }
     });
   }
 
@@ -793,14 +1007,27 @@ class _MainShellState extends State<MainShell> {
         _rebuildExportKeys();
         _selectedExportColorIndex = null;
         _statusMessage = append
-            ? 'Appended ${generated.length} generated colors.'
-            : 'Replaced cart with ${generated.length} generated colors.';
+            ? _tr(
+                'Appended {count} generated colors.',
+                params: <String, String>{
+                  'count': generated.length.toString(),
+                },
+              )
+            : _tr(
+                'Replaced cart with {count} generated colors.',
+                params: <String, String>{
+                  'count': generated.length.toString(),
+                },
+              );
       });
 
       _applyAutoThemeSeedFromContext();
     } catch (error) {
       setState(() {
-        _statusMessage = 'Generate failed: $error';
+        _statusMessage = _tr(
+          'Generate failed: {error}',
+          params: <String, String>{'error': error.toString()},
+        );
       });
     }
   }
@@ -904,6 +1131,7 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _previewConfigExpanded = expanded;
       if (expanded) {
+        _previewResultExpanded = false;
         _previewEffectExpanded = false;
       }
     });
@@ -912,6 +1140,10 @@ class _MainShellState extends State<MainShell> {
   void _setPreviewResultExpanded(bool expanded) {
     setState(() {
       _previewResultExpanded = expanded;
+      if (expanded) {
+        _previewConfigExpanded = false;
+        _previewEffectExpanded = false;
+      }
     });
   }
 
@@ -920,6 +1152,7 @@ class _MainShellState extends State<MainShell> {
       _previewEffectExpanded = expanded;
       if (expanded) {
         _previewConfigExpanded = false;
+        _previewResultExpanded = false;
       }
     });
   }
@@ -963,27 +1196,37 @@ class _MainShellState extends State<MainShell> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Copyright & License',
+                    _tr('Copyright & License'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'App: $appDisplayName\nVersion: $appVersion\nAuthor: $appAuthor',
+                    _tr(
+                      'App: {appName}\nVersion: {version}\nAuthor: {author}',
+                      params: <String, String>{
+                        'appName': _tr(appDisplayName),
+                        'version': appVersion,
+                        'author': appAuthor,
+                      },
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    nonCommercialNotice,
+                    _tr(nonCommercialNotice),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    antiResaleMessage,
+                    _tr(antiResaleMessage),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Export source suffix: $exportNameSuffix',
+                    _tr(
+                      'Export source suffix: {suffix}',
+                      params: <String, String>{'suffix': exportNameSuffix},
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -991,7 +1234,7 @@ class _MainShellState extends State<MainShell> {
                     alignment: Alignment.centerRight,
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
+                      child: Text(_tr('Close')),
                     ),
                   ),
                 ],
@@ -1007,115 +1250,110 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final orientation = MediaQuery.of(context).orientation;
     final activePage = _buildActivePage();
+    final showHeader =
+        _activePageIndex == WorkspacePage.settings.index;
 
-    final appBar = AppBar(
-      toolbarHeight: 70,
-      titleSpacing: 12,
-      title: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$appDisplayName $appVersion'),
-          Text(
-            _statusWatermarkMessage,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Center(
-            child: Text(
-              _pageTitle(_activePageIndex),
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ),
-        ),
-      ],
-    );
-
-    if (orientation == Orientation.landscape) {
-      return Scaffold(
-        appBar: appBar,
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _activePageIndex,
-              labelType: NavigationRailLabelType.all,
-              onDestinationSelected: _setActivePage,
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.folder_copy_outlined),
-                  selectedIcon: Icon(Icons.folder_copy),
-                  label: Text('Materials'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.preview_outlined),
-                  selectedIcon: Icon(Icons.preview),
-                  label: Text('Preview'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.ios_share_outlined),
-                  selectedIcon: Icon(Icons.ios_share),
-                  label: Text('Export'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('Settings'),
+    final PreferredSizeWidget? appBar = showHeader
+        ? AppBar(
+            toolbarHeight: 70,
+            titleSpacing: 12,
+            title: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_tr(appDisplayName)),
+                Text(
+                  _statusWatermarkMessage,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
-            const VerticalDivider(width: 1),
-            Expanded(child: activePage),
-          ],
-        ),
+          )
+        : null;
+
+    if (orientation == Orientation.landscape) {
+      final body = Row(
+        children: [
+          NavigationRail(
+            selectedIndex: _activePageIndex,
+            labelType: NavigationRailLabelType.all,
+            onDestinationSelected: _setActivePage,
+            destinations: [
+              NavigationRailDestination(
+                icon: const Icon(Icons.folder_copy_outlined),
+                selectedIcon: const Icon(Icons.folder_copy),
+                label: Text(_tr('Materials')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.preview_outlined),
+                selectedIcon: const Icon(Icons.preview),
+                label: Text(_tr('Preview')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.ios_share_outlined),
+                selectedIcon: const Icon(Icons.ios_share),
+                label: Text(_tr('Export')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.settings_outlined),
+                selectedIcon: const Icon(Icons.settings),
+                label: Text(_tr('Settings')),
+              ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(child: activePage),
+        ],
+      );
+
+      return Scaffold(
+        appBar: appBar,
+        body: showHeader
+            ? body
+            : SafeArea(
+                bottom: false,
+                child: body,
+              ),
       );
     }
 
     return Scaffold(
       appBar: appBar,
-      body: activePage,
+      body: showHeader
+          ? activePage
+          : SafeArea(
+              bottom: false,
+              child: activePage,
+            ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _activePageIndex,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.folder_copy_outlined),
-            selectedIcon: Icon(Icons.folder_copy),
-            label: 'Materials',
+            icon: const Icon(Icons.folder_copy_outlined),
+            selectedIcon: const Icon(Icons.folder_copy),
+            label: _tr('Materials'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.preview_outlined),
-            selectedIcon: Icon(Icons.preview),
-            label: 'Preview',
+            icon: const Icon(Icons.preview_outlined),
+            selectedIcon: const Icon(Icons.preview),
+            label: _tr('Preview'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.ios_share_outlined),
-            selectedIcon: Icon(Icons.ios_share),
-            label: 'Export',
+            icon: const Icon(Icons.ios_share_outlined),
+            selectedIcon: const Icon(Icons.ios_share),
+            label: _tr('Export'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: _tr('Settings'),
           ),
         ],
         onDestinationSelected: _setActivePage,
       ),
     );
-  }
-
-  String _pageTitle(int index) {
-    final page = WorkspacePage.values[index];
-    return switch (page) {
-      WorkspacePage.management => '管理区',
-      WorkspacePage.preview => '预览页',
-      WorkspacePage.export => '导出页',
-      WorkspacePage.settings => '设置页',
-    };
   }
 
   Widget _buildActivePage() {
@@ -1275,10 +1513,23 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildExportPage() {
+    PaletteExportPayload? exportPreviewPayload;
+    String? exportPreviewError;
+    try {
+      exportPreviewPayload = _buildCurrentExportPayload();
+    } catch (error) {
+      exportPreviewError = _tr(
+        'Preview build failed: {error}',
+        params: <String, String>{'error': error.toString()},
+      );
+    }
+
     final optionsPanel = ExportOptionsPanel(
       isBusy: _isBusy,
       statusMessage: _statusMessage,
       supportedExtensions: _importService.supportedExportExtensions,
+      selectedExtension: _selectedExportExtension,
+      exportFileName: _exportFileName,
       sortByLightness: _sortByLightness,
       exportAsHeatmapGradient: _exportAsHeatmapGradient,
       heatmapSteps: _heatmapSteps,
@@ -1290,13 +1541,17 @@ class _MainShellState extends State<MainShell> {
       cartIsEmpty: _exportColors.isEmpty,
       colorCandidates: _generatorColorCandidates,
       isBaseColorPicking: _isPickingBaseColor,
+      isSecondaryColorPicking: _isPickingSecondaryColor,
       formatExpanded: _exportFormatExpanded,
       generatorExpanded: _exportGeneratorExpanded,
       strategyExpanded: _exportStrategyExpanded,
       onBaseColorFieldPressed: _toggleBaseColorPicking,
+      onSecondaryColorFieldPressed: _toggleSecondaryColorPicking,
       onFormatExpandedChanged: _setExportFormatExpanded,
       onGeneratorExpandedChanged: _setExportGeneratorExpanded,
       onStrategyExpandedChanged: _setExportStrategyExpanded,
+      onSelectedExtensionChanged: _setSelectedExportExtension,
+      onExportFileNameChanged: _setExportFileName,
       onExportPressed: _exportPalette,
       onSortByLightnessChanged: _setSortByLightness,
       onExportAsHeatmapGradientChanged: _setExportAsHeatmapGradient,
@@ -1320,6 +1575,16 @@ class _MainShellState extends State<MainShell> {
       isBusy: _isBusy,
       selectedIndex: _selectedExportColorIndex,
       isBaseColorPicking: _isPickingBaseColor,
+      isSecondaryColorPicking: _isPickingSecondaryColor,
+      listExpanded: _exportColorListExpanded,
+      previewExpanded: _exportPreviewExpanded,
+      previewFileName:
+          '${_effectiveExportFileName}${_selectedExportExtension.toLowerCase()}',
+      previewContent: exportPreviewPayload?.previewContent ?? '',
+      previewExtension: _selectedExportExtension,
+      previewError: exportPreviewError,
+      onListExpandedChanged: _setExportColorListExpanded,
+      onPreviewExpandedChanged: _setExportPreviewExpanded,
       onSelectedIndexChanged: _selectExportColorIndex,
       onAddManualColorPressed: _addManualExportColor,
     );
@@ -1369,23 +1634,23 @@ class _MainShellState extends State<MainShell> {
       child: ListView(
         children: [
           _SettingsCard(
-            title: '软件外观',
+            title: _tr('Appearance'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SegmentedButton<ThemeMode>(
-                  segments: const [
+                  segments: [
                     ButtonSegment<ThemeMode>(
                       value: ThemeMode.light,
-                      label: Text('亮色'),
+                      label: Text(_tr('Light')),
                     ),
                     ButtonSegment<ThemeMode>(
                       value: ThemeMode.dark,
-                      label: Text('暗色'),
+                      label: Text(_tr('Dark')),
                     ),
                     ButtonSegment<ThemeMode>(
                       value: ThemeMode.system,
-                      label: Text('自动'),
+                      label: Text(_tr('System')),
                     ),
                   ],
                   selected: {widget.themeMode},
@@ -1400,7 +1665,7 @@ class _MainShellState extends State<MainShell> {
                   contentPadding: EdgeInsets.zero,
                   value: _autoThemeColor,
                   onChanged: _setAutoThemeColor,
-                  title: const Text('自动取色（从文件/导出区）'),
+                  title: Text(_tr('Auto pick theme color (from file/export cart)')),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -1408,15 +1673,20 @@ class _MainShellState extends State<MainShell> {
                   onChanged: widget.materialDynamicColorAvailable
                       ? widget.onUseMaterialDynamicColorChanged
                       : null,
-                  title: const Text('Android Material 自动取色'),
+                  title: Text(_tr('Android Material dynamic color')),
                   subtitle: Text(
                     widget.materialDynamicColorAvailable
-                        ? '启用后优先使用系统动态配色'
-                        : '当前设备暂不支持系统动态配色',
+                        ? _tr('When enabled, system dynamic colors are preferred')
+                        : _tr('System dynamic colors are not available on this device'),
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text('当前主题色: $seedHex'),
+                Text(
+                  _tr(
+                    'Current theme color: {hex}',
+                    params: <String, String>{'hex': seedHex},
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -1451,13 +1721,13 @@ class _MainShellState extends State<MainShell> {
                     OutlinedButton.icon(
                       onPressed: _applyAutoThemeSeedFromContext,
                       icon: const Icon(Icons.auto_fix_high),
-                      label: const Text('立即自动取色'),
+                      label: Text(_tr('Pick automatically now')),
                     ),
                     OutlinedButton.icon(
                       onPressed: () =>
                           _setThemeSeedColor(const Color(0xFF1D4ED8)),
                       icon: const Icon(Icons.restart_alt),
-                      label: const Text('恢复默认主题色'),
+                      label: Text(_tr('Reset default theme color')),
                     ),
                   ],
                 ),
@@ -1466,16 +1736,57 @@ class _MainShellState extends State<MainShell> {
           ),
           const SizedBox(height: 12),
           _SettingsCard(
-            title: '版权页',
+            title: _tr('Language'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedButton<AppLanguagePreference>(
+                  segments: [
+                    ButtonSegment<AppLanguagePreference>(
+                      value: AppLanguagePreference.system,
+                      label: Text(_tr('System')),
+                    ),
+                    ButtonSegment<AppLanguagePreference>(
+                      value: AppLanguagePreference.zhCn,
+                      label: Text(_tr('Chinese')),
+                    ),
+                    ButtonSegment<AppLanguagePreference>(
+                      value: AppLanguagePreference.enUs,
+                      label: Text(_tr('English (US)')),
+                    ),
+                  ],
+                  selected: {widget.languagePreference},
+                  onSelectionChanged: (selection) {
+                    if (selection.isNotEmpty) {
+                      widget.onLanguagePreferenceChanged(selection.first);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(_tr('System language falls back to English (US) when unsupported.')),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            title: _tr('Copyright'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Author: $appAuthor\nVersion: $appVersion'),
+                Text(
+                  _tr(
+                    'Author: {author}\nVersion: {version}',
+                    params: <String, String>{
+                      'author': appAuthor,
+                      'version': appVersion,
+                    },
+                  ),
+                ),
                 const SizedBox(height: 8),
                 FilledButton.tonalIcon(
                   onPressed: _openCopyrightPage,
                   icon: const Icon(Icons.gavel_outlined),
-                  label: const Text('打开版权页'),
+                  label: Text(_tr('Open copyright page')),
                 ),
               ],
             ),

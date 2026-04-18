@@ -1,0 +1,3 @@
+files:
+  - source: mobile_flutter/assets/i18n/en-US.json
+    translation: mobile_flutter/assets/i18n/*.json

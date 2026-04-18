@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -49,6 +50,22 @@ class PaletteReextractResult {
   final Palette palette;
   final ExtractionProfile extractionProfile;
   final Uint8List? previewBytes;
+}
+
+class PaletteExportPayload {
+  const PaletteExportPayload({
+    required this.palette,
+    required this.extension,
+    required List<int> bytes,
+    required this.previewContent,
+    required this.isBinaryPreview,
+  }) : bytes = List<int>.unmodifiable(bytes);
+
+  final Palette palette;
+  final String extension;
+  final List<int> bytes;
+  final String previewContent;
+  final bool isBinaryPreview;
 }
 
 class PaletteImportService {
@@ -114,12 +131,12 @@ class PaletteImportService {
 
   String get cameraCaptureDisabledReason {
     if (kIsWeb) {
-      return 'Web 环境不支持相机取色。';
+      return 'Camera sampling is not supported on Web.';
     }
     if (Platform.isIOS) {
-      return '当前 iOS 主工程未启用相机权限声明，已临时禁用相机取色以避免崩溃。';
+      return 'Camera permission is not declared in the current iOS host app. Camera sampling is temporarily disabled to avoid crashes.';
     }
-    return '当前平台不支持相机取色。';
+    return 'Camera sampling is not supported on the current platform.';
   }
 
   Future<PaletteImportResult?> pickAndImport({
@@ -183,9 +200,11 @@ class PaletteImportService {
         requestFullMetadata: false,
       );
     } on MissingPluginException catch (error) {
-      throw UnsupportedError('相机插件不可用: $error');
+      throw UnsupportedError('Camera plugin is unavailable: $error');
     } on PlatformException catch (error) {
-      throw UnsupportedError('相机调用失败: ${error.message ?? error.code}');
+      throw UnsupportedError(
+        'Camera invocation failed: ${error.message ?? error.code}',
+      );
     }
 
     if (captured == null) {
@@ -315,41 +334,12 @@ class PaletteImportService {
     bool exportAsHeatmapGradient = false,
     int heatmapSteps = 32,
   }) async {
-    final normalizedExtension = extension.startsWith('.')
-        ? extension.toLowerCase()
-        : '.${extension.toLowerCase()}';
-
-    var outputPalette = palette;
-    if (sortByLightness) {
-      outputPalette = Palette(
-        name: outputPalette.name,
-        colors: _generationService.sortByLightness(outputPalette.colors),
-        sourcePath: outputPalette.sourcePath,
-        sourceFormat: outputPalette.sourceFormat,
-        sourceGroup: outputPalette.sourceGroup,
-        metadata: outputPalette.metadata,
-      );
-    }
-
-    if (exportAsHeatmapGradient && outputPalette.colors.isNotEmpty) {
-      final generated = _generationService.interpolateFromAnchors(
-        outputPalette.colors,
-        steps: heatmapSteps.clamp(2, 512),
-        namePrefix: 'Heatmap',
-      );
-      outputPalette = Palette(
-        name: '${outputPalette.name} Heatmap',
-        colors: generated,
-        sourcePath: outputPalette.sourcePath,
-        sourceFormat: outputPalette.sourceFormat,
-        sourceGroup: outputPalette.sourceGroup,
-        metadata: outputPalette.metadata,
-      );
-    }
-
-    final bytes = _router.encode(
-      extension: normalizedExtension,
-      palette: outputPalette,
+    final payload = buildExportPayload(
+      palette: palette,
+      extension: extension,
+      sortByLightness: sortByLightness,
+      exportAsHeatmapGradient: exportAsHeatmapGradient,
+      heatmapSteps: heatmapSteps,
     );
 
     final baseDir = await _resolveExportBaseDirectory();
@@ -358,14 +348,58 @@ class PaletteImportService {
     await exportDirectory.create(recursive: true);
 
     final safeName = _sanitizeFileName(
-      outputPalette.name.trim().isEmpty ? 'palette' : outputPalette.name,
+      payload.palette.name.trim().isEmpty ? 'palette' : payload.palette.name,
     );
 
     final output = File(
-      path.join(exportDirectory.path, '$safeName$normalizedExtension'),
+      path.join(exportDirectory.path, '$safeName${payload.extension}'),
     );
-    await output.writeAsBytes(bytes, flush: true);
+    await output.writeAsBytes(payload.bytes, flush: true);
     return output;
+  }
+
+  PaletteExportPayload buildExportPayload({
+    required Palette palette,
+    required String extension,
+    bool sortByLightness = false,
+    bool exportAsHeatmapGradient = false,
+    int heatmapSteps = 32,
+  }) {
+    final normalizedExtension = extension.startsWith('.')
+        ? extension.toLowerCase()
+        : '.${extension.toLowerCase()}';
+    final outputPalette = _buildOutputPalette(
+      palette: palette,
+      sortByLightness: sortByLightness,
+      exportAsHeatmapGradient: exportAsHeatmapGradient,
+      heatmapSteps: heatmapSteps,
+    );
+
+    final bytes = _router.encode(
+      extension: normalizedExtension,
+      palette: outputPalette,
+    );
+
+    final isTextPreview = switch (normalizedExtension) {
+      '.json' || '.csv' || '.gpl' || '.cpt' => true,
+      _ => false,
+    };
+
+    final previewContent = isTextPreview
+        ? utf8.decode(bytes, allowMalformed: true)
+        : _buildBinaryPreview(
+            extension: normalizedExtension,
+            bytes: bytes,
+            palette: outputPalette,
+          );
+
+    return PaletteExportPayload(
+      palette: outputPalette,
+      extension: normalizedExtension,
+      bytes: bytes,
+      previewContent: previewContent,
+      isBinaryPreview: !isTextPreview,
+    );
   }
 
   Future<File> exportToTempFile({
@@ -632,6 +666,88 @@ class PaletteImportService {
   String _fallbackName(String fileName) {
     final name = path.basenameWithoutExtension(fileName).trim();
     return name.isEmpty ? 'Imported Palette' : name;
+  }
+
+  Palette _buildOutputPalette({
+    required Palette palette,
+    required bool sortByLightness,
+    required bool exportAsHeatmapGradient,
+    required int heatmapSteps,
+  }) {
+    var outputPalette = palette;
+    if (sortByLightness) {
+      outputPalette = Palette(
+        name: outputPalette.name,
+        colors: _generationService.sortByLightness(outputPalette.colors),
+        sourcePath: outputPalette.sourcePath,
+        sourceFormat: outputPalette.sourceFormat,
+        sourceGroup: outputPalette.sourceGroup,
+        metadata: outputPalette.metadata,
+      );
+    }
+
+    if (exportAsHeatmapGradient && outputPalette.colors.isNotEmpty) {
+      final generated = _generationService.interpolateFromAnchors(
+        outputPalette.colors,
+        steps: heatmapSteps.clamp(2, 512),
+        namePrefix: 'Heatmap',
+      );
+      outputPalette = Palette(
+        name: '${outputPalette.name} Heatmap',
+        colors: generated,
+        sourcePath: outputPalette.sourcePath,
+        sourceFormat: outputPalette.sourceFormat,
+        sourceGroup: outputPalette.sourceGroup,
+        metadata: outputPalette.metadata,
+      );
+    }
+    return outputPalette;
+  }
+
+  String _buildBinaryPreview({
+    required String extension,
+    required List<int> bytes,
+    required Palette palette,
+  }) {
+    const maxPreviewBytes = 192;
+    final previewBytes = bytes.take(maxPreviewBytes).toList(growable: false);
+    final buffer = StringBuffer()
+      ..writeln('# Binary format ${extension.toUpperCase().replaceFirst('.', '')}')
+      ..writeln('# Bytes: ${bytes.length}')
+      ..writeln('# Palette: ${palette.name}')
+      ..writeln('# Colors: ${palette.colors.length}')
+      ..writeln('# Hex dump (first ${previewBytes.length} bytes)');
+
+    for (var offset = 0; offset < previewBytes.length; offset += 16) {
+      final chunk = previewBytes.sublist(
+        offset,
+        math.min(offset + 16, previewBytes.length),
+      );
+      final hexChunk = chunk
+          .map((value) => value.toRadixString(16).padLeft(2, '0').toUpperCase())
+          .join(' ');
+      buffer.writeln('${offset.toRadixString(16).padLeft(4, '0')}: $hexChunk');
+    }
+
+    if (bytes.length > previewBytes.length) {
+      buffer.writeln(
+        '# ... ${bytes.length - previewBytes.length} more bytes omitted',
+      );
+    }
+
+    if (palette.colors.isNotEmpty) {
+      buffer
+        ..writeln('#')
+        ..writeln('# Palette colors');
+      for (var index = 0; index < palette.colors.length; index++) {
+        final color = palette.colors[index];
+        buffer.writeln(
+          '${(index + 1).toString().padLeft(2, '0')}  ${color.hexCode}  ${color.name}',
+        );
+      }
+    }
+
+    return buffer.toString();
   }
 
   String _sanitizeFileName(String value) {

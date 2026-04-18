@@ -1412,7 +1412,7 @@ class MainWindow(QMainWindow):
         self.status_rotation_index = 0
         self.status_rotation_timer = QTimer(self)
         self.status_rotation_label = QLabel()
-        self.setWindowTitle(f"{APP_DISPLAY_NAME} {APP_VERSION}")
+        self.setWindowTitle(APP_DISPLAY_NAME)
         self.resize(1720, 980)
         self.setAcceptDrops(True)
         self.setStyleSheet(
