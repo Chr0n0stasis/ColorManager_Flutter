@@ -53,7 +53,7 @@ class PaletteReextractResult {
 }
 
 class PaletteExportPayload {
-  const PaletteExportPayload({
+  PaletteExportPayload({
     required this.palette,
     required this.extension,
     required List<int> bytes,
