@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const ColorManagerMobileApp());
     await tester.pumpAndSettle();
 
-    expect(find.text(appDisplayName), findsNothing);
+    expect(find.text(appDisplayName), findsOneWidget);
     expect(find.text('Materials'), findsWidgets);
   });
 }
