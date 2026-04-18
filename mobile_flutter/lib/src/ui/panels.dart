@@ -42,8 +42,11 @@ class MaterialsPanel extends StatelessWidget {
     required this.searchText,
     required this.favoritesOnly,
     required this.statusMessage,
+    this.headerTitle,
+    this.headerSubtitle,
     required this.onImportPressed,
     required this.onImportCameraPressed,
+    required this.onImportCloudPressed,
     required this.onFavoriteFilterChanged,
     required this.onSearchChanged,
     required this.onFileSelected,
@@ -56,8 +59,11 @@ class MaterialsPanel extends StatelessWidget {
   final String searchText;
   final bool favoritesOnly;
   final String? statusMessage;
+  final String? headerTitle;
+  final String? headerSubtitle;
   final Future<void> Function() onImportPressed;
   final Future<void> Function() onImportCameraPressed;
+  final Future<void> Function() onImportCloudPressed;
   final ValueChanged<bool> onFavoriteFilterChanged;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<ManagedPaletteFile> onFileSelected;
@@ -71,43 +77,100 @@ class MaterialsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (headerTitle != null) ...[
+            Text(
+              headerTitle!,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            if (headerSubtitle != null && headerSubtitle!.isNotEmpty)
+              Text(
+                headerSubtitle!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            const SizedBox(height: 10),
+          ],
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isBusy ? null : () => onImportPressed(),
-                  icon: const Icon(Icons.file_open),
-                  label: Text(context.tr('Import File')),
+                child: TextFormField(
+                  initialValue: searchText,
+                  onChanged: onSearchChanged,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: context.tr('Search by file name/format'),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: isBusy ? null : () => onImportCameraPressed(),
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  label: Text(context.tr('Camera Sampling')),
+              if (isBusy)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.add,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                    tooltip: context.tr('Import'),
+                    onSelected: (value) {
+                      if (value == 'local') {
+                        onImportPressed();
+                      } else if (value == 'camera') {
+                        onImportCameraPressed();
+                      } else if (value == 'cloud') {
+                        onImportCloudPressed();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'local',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.folder_open),
+                            const SizedBox(width: 12),
+                            Text(context.tr('Import from Local')),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'camera',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.photo_camera_outlined),
+                            const SizedBox(width: 12),
+                            Text(context.tr('Import from Camera')),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'cloud',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.cloud_upload_outlined),
+                            const SizedBox(width: 12),
+                            Text(context.tr('Import from Cloud Storage')),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (isBusy) ...[
-                const SizedBox(width: 8),
-                const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ],
             ],
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            initialValue: searchText,
-            onChanged: onSearchChanged,
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: context.tr('Search by file name/format'),
-              isDense: true,
-              border: const OutlineInputBorder(),
-            ),
           ),
           const SizedBox(height: 8),
           Align(
