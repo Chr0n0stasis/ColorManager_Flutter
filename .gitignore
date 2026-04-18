@@ -19,18 +19,18 @@ dist/
 .vscode/
 .idea/
 
-# Flutter project artifacts
-mobile_flutter/.dart_tool/
-mobile_flutter/.packages
-mobile_flutter/.flutter-plugins
-mobile_flutter/.flutter-plugins-dependencies
-mobile_flutter/.pub-cache/
-mobile_flutter/build/
-mobile_flutter/android/.gradle/
-mobile_flutter/android/local.properties
-mobile_flutter/ios/Flutter/ephemeral/
-mobile_flutter/ios/Flutter/Generated.xcconfig
-mobile_flutter/ios/Flutter/flutter_export_environment.sh
+# Flutter artifacts
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/build/
+**/android/.gradle/
+**/android/local.properties
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
 
 # Local app data
 app/user_config.json
@@ -39,18 +39,6 @@ user_config.json
 # Logs
 *.log
 
-<<<<<<< HEAD
 # OS files
 .DS_Store
 Thumbs.db
-=======
-# Flutter
-**/.dart_tool/
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
-**/.packages
-**/build/
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/flutter_export_environment.sh
-**/android/.gradle/
->>>>>>> ab7f8b7 (feat: align with upstream v1.0.1 attribution and migrate mobile workspace)
