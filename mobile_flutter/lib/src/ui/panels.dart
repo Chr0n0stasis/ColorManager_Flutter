@@ -1,13 +1,15 @@
-import 'dart:math' as math;
-import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-
 import '../core/models/color_entry.dart';
 import '../core/models/extraction_profile.dart';
 import '../core/models/managed_palette_file.dart';
 import '../core/services/palette_generation_service.dart';
 import '../i18n/app_localizations.dart';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+
+
+
 
 enum PaletteChartMode {
   table,
@@ -1415,6 +1417,7 @@ class PreviewCanvasPanel extends StatelessWidget {
     required this.onImportPressed,
     required this.onImportCameraPressed,
     required this.onProfileChanged,
+    required this.onAddColor,
   });
 
   final ManagedPaletteFile? file;
@@ -1422,6 +1425,7 @@ class PreviewCanvasPanel extends StatelessWidget {
   final Future<void> Function() onImportPressed;
   final Future<void> Function() onImportCameraPressed;
   final ValueChanged<ExtractionProfile> onProfileChanged;
+  final ValueChanged<ColorEntry> onAddColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1455,6 +1459,39 @@ class PreviewCanvasPanel extends StatelessWidget {
     return _PanelFrame(
       title: 'File Preview',
       subtitle: '',
+      headerAction: file != null
+          ? IconButton(
+              icon: const Icon(Icons.fullscreen),
+              tooltip: context.tr('Fullscreen Analytics'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    fullscreenDialog: true,
+                    builder: (_) => _FullscreenPreviewDialog(
+                      file: file!,
+                      onExtractFromBox: (rect) {
+                        onProfileChanged(
+                          ExtractionProfile(
+                            mode: ExtractionMode.boxRange,
+                            sampleCount: file!.extractionProfile.sampleCount,
+                            boxLeft: rect.left,
+                            boxTop: rect.top,
+                            boxWidth: rect.width,
+                            boxHeight: rect.height,
+                          ),
+                        );
+                      },
+                      onExtractPixel: (color) {
+                        final hex = '#${color.value.toRadixString(16).padLeft(8, "0").substring(2).toUpperCase()}';
+                        onAddColor(ColorEntry(name: 'Picked', hexCode: hex));
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                );
+              },
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -4418,11 +4455,13 @@ class _PanelFrame extends StatelessWidget {
   const _PanelFrame({
     required this.title,
     this.subtitle = '',
+    this.headerAction,
     required this.child,
   });
 
   final String title;
   final String subtitle;
+  final Widget? headerAction;
   final Widget child;
 
   @override
@@ -4442,15 +4481,26 @@ class _PanelFrame extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr(title),
-                style: Theme.of(context).textTheme.titleMedium),
-            if (subtitle.trim().isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                context.tr(subtitle),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.tr(title), style: Theme.of(context).textTheme.titleMedium),
+                      if (subtitle.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          context.tr(subtitle),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (headerAction != null) headerAction!,
+              ],
+            ),
             const SizedBox(height: 10),
             Expanded(child: child),
           ],
@@ -4739,4 +4789,260 @@ Color _parseHexColor(String hexCode) {
 
 int _clampChannel(num value) {
   return value.round().clamp(0, 255).toInt();
+}
+
+
+enum _FullscreenViewState { idle, boxRange, colorPicker }
+
+class _FullscreenPreviewDialog extends StatefulWidget {
+  const _FullscreenPreviewDialog({
+    required this.file,
+    required this.onExtractFromBox,
+    required this.onExtractPixel,
+  });
+
+  final ManagedPaletteFile file;
+  final ValueChanged<Rect> onExtractFromBox;
+  final ValueChanged<Color> onExtractPixel;
+
+  @override
+  State<_FullscreenPreviewDialog> createState() => _FullscreenPreviewDialogState();
+}
+
+class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
+  _FullscreenViewState _state = _FullscreenViewState.idle;
+  
+  img.Image? _decodedImage;
+  Offset? _pointerPos;
+  Color? _pointerColor;
+  
+  Offset? _dragStart;
+  Offset? _dragCurrent;
+
+  @override
+  void initState() {
+    super.initState();
+    _decodeImageAsync();
+  }
+  
+  Future<void> _decodeImageAsync() async {
+    final bytes = widget.file.sourceBytes;
+    if (bytes != null) {
+      final decoded = img.decodeImage(Uint8List.fromList(bytes));
+      if (mounted) {
+        setState(() {
+          _decodedImage = decoded;
+        });
+      }
+    }
+  }
+
+  void _handlePointerPan(DragUpdateDetails details, BoxConstraints constraints) {
+    if (_decodedImage == null) return;
+    final w = constraints.maxWidth;
+    final h = constraints.maxHeight;
+    final pctX = (details.localPosition.dx / w).clamp(0.0, 1.0);
+    final pctY = (details.localPosition.dy / h).clamp(0.0, 1.0);
+    
+    final px = (pctX * _decodedImage!.width).toInt().clamp(0, _decodedImage!.width - 1);
+    final py = (pctY * _decodedImage!.height).toInt().clamp(0, _decodedImage!.height - 1);
+    
+    final pixel = _decodedImage!.getPixel(px, py);
+    
+    setState(() {
+      _pointerPos = details.localPosition;
+      _pointerColor = Color.fromARGB(pixel.a.toInt(), pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt());
+    });
+  }
+
+  void _handleBoxStart(DragStartDetails details) {
+    setState(() {
+      _dragStart = details.localPosition;
+      _dragCurrent = details.localPosition;
+    });
+  }
+
+  void _handleBoxUpdate(DragUpdateDetails details) {
+    setState(() {
+      _dragCurrent = details.localPosition;
+    });
+  }
+
+  Widget _buildTopButtons() {
+    List<Widget> buttons = [];
+    
+    if (_state == _FullscreenViewState.idle) {
+      buttons = [
+        FloatingActionButton.small(
+          heroTag: 'fs_close',
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Icon(Icons.close),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_box',
+          onPressed: () => setState(() => _state = _FullscreenViewState.boxRange),
+          child: const Icon(Icons.crop),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_pick',
+          onPressed: () => setState(() => _state = _FullscreenViewState.colorPicker),
+          child: const Icon(Icons.colorize),
+        ),
+      ];
+    } else if (_state == _FullscreenViewState.boxRange) {
+      buttons = [
+        FloatingActionButton.small(
+          heroTag: 'fs_back_b',
+          onPressed: () => setState(() => _state = _FullscreenViewState.idle),
+          child: const Icon(Icons.arrow_back),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_exec_b',
+          onPressed: () {
+            if (_dragStart != null && _dragCurrent != null) {
+              final w = context.size!.width;
+              final h = context.size!.height;
+              final rect = Rect.fromPoints(_dragStart!, _dragCurrent!).intersect(Rect.fromLTWH(0, 0, w, h));
+              final left = (rect.left / w).clamp(0.0, 1.0);
+              final top = (rect.top / h).clamp(0.0, 1.0);
+              final right = (rect.right / w).clamp(0.0, 1.0);
+              final bottom = (rect.bottom / h).clamp(0.0, 1.0);
+              widget.onExtractFromBox(Rect.fromLTRB(left, top, right, bottom));
+            }
+          },
+          child: const Icon(Icons.check),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_rst_b',
+          onPressed: () => setState(() {
+            _dragStart = null;
+            _dragCurrent = null;
+          }),
+          child: const Icon(Icons.refresh),
+        ),
+      ];
+    } else if (_state == _FullscreenViewState.colorPicker) {
+      buttons = [
+        FloatingActionButton.small(
+          heroTag: 'fs_back_p',
+          onPressed: () => setState(() => _state = _FullscreenViewState.idle),
+          child: const Icon(Icons.arrow_back),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_exec_p',
+          onPressed: () {
+            if (_pointerColor != null) {
+              widget.onExtractPixel(_pointerColor!);
+            }
+          },
+          child: const Icon(Icons.check),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'fs_del_p',
+          onPressed: () {},
+          child: const Icon(Icons.undo),
+        ),
+      ];
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: buttons,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = Image.memory(
+      Uint8List.fromList(widget.file.sourceBytes!),
+      fit: BoxFit.contain,
+    );
+
+    if (_state != _FullscreenViewState.idle) {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            onPanStart: _state == _FullscreenViewState.boxRange ? _handleBoxStart : (d) => _handlePointerPan(DragUpdateDetails(globalPosition: d.globalPosition, localPosition: d.localPosition), constraints),
+            onPanUpdate: _state == _FullscreenViewState.boxRange ? _handleBoxUpdate : (d) => _handlePointerPan(d, constraints),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.memory(
+                  Uint8List.fromList(widget.file.sourceBytes!),
+                  fit: BoxFit.fill,
+                ),
+                if (_state == _FullscreenViewState.boxRange && _dragStart != null && _dragCurrent != null)
+                  Positioned.fromRect(
+                    rect: Rect.fromPoints(_dragStart!, _dragCurrent!),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 2),
+                        color: Colors.white.withOpacity(0.2),
+                      ),
+                    ),
+                  ),
+                if (_state == _FullscreenViewState.colorPicker && _pointerPos != null && _pointerColor != null)
+                  Positioned(
+                    left: _pointerPos!.dx,
+                    top: _pointerPos!.dy,
+                    child: FractionalTranslation(
+                      translation: const Offset(0.2, -1.2),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          border: Border.all(color: Colors.white54),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(width: 24, height: 24, color: _pointerColor),
+                            const SizedBox(width: 8),
+                            Text(
+                              '#',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
+      );
+    } else {
+      content = InteractiveViewer(
+        maxScale: 10.0,
+        child: content,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(child: content),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: _buildTopButtons(),
+          ),
+        ],
+      )
+    );
+  }
 }

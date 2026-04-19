@@ -2026,6 +2026,11 @@ class _MainShellState extends State<MainShell> {
       onImportPressed: _importFile,
       onImportCameraPressed: _importFromCamera,
       onProfileChanged: _updateExtractionProfile,
+      onAddColor: (color) {
+        if (_selectedFile != null) {
+           _toggleExportColor(color);
+        }
+      },
     );
 
     final inspectorPanel = PreviewInspectorPanel(
@@ -2064,42 +2069,89 @@ class _MainShellState extends State<MainShell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final fraction =
-            constraints.maxWidth < LayoutContract.mediumBreakpoint ? 1.0 : 1 / 3;
+        final isMobile = constraints.maxWidth < LayoutContract.mediumBreakpoint;
+        
+        if (isMobile) {
+          return Scaffold(
+            drawer: Theme(
+              data: Theme.of(context).copyWith(
+                drawerTheme: DrawerThemeData(
+                  width: MediaQuery.of(context).size.width / 3,
+                ),
+              ),
+              child: Drawer(child: SafeArea(child: Padding(padding: const EdgeInsets.all(12), child: sourcePanel))),
+            ),
+            endDrawer: Theme(
+              data: Theme.of(context).copyWith(
+                drawerTheme: DrawerThemeData(
+                  width: MediaQuery.of(context).size.width / 3,
+                ),
+              ),
+              child: Drawer(child: SafeArea(child: Padding(padding: const EdgeInsets.all(12), child: cartSummaryPanel))),
+            ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Builder(builder: (c) => IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(c).openDrawer())),
+                      Builder(builder: (c) => IconButton(icon: const Icon(Icons.shopping_cart), onPressed: () => Scaffold.of(c).openEndDrawer())),
+                    ],
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: canvasPanel,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: inspectorPanel,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: PageView(
-            padEnds: false,
-            controller: PageController(viewportFraction: fraction),
-            scrollDirection: Axis.horizontal,
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: sourcePanel,
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: sourcePanel,
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: canvasPanel,
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: canvasPanel,
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: inspectorPanel,
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: inspectorPanel,
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: cartSummaryPanel,
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: cartSummaryPanel,
+                ),
               ),
             ],
           ),
-        ),
         );
       },
     );
