@@ -107,6 +107,7 @@ class PaletteImportService {
       '/storage/emulated/0/Documents/CLM';
   static const String _androidExportFolderName = 'export';
   static const String _androidFavoriteFolderName = 'favorates';
+  static const String _androidCacheFolderName = 'import_cache';
 
   List<String> get supportedImportExtensions => <String>[
         ..._paletteExtensions,
@@ -160,18 +161,23 @@ class PaletteImportService {
       throw const FileSystemException('Unable to read selected file bytes.');
     }
 
+    final sourceBytes = Uint8List.fromList(bytes);
     final extension = _normalizeExtension(platformFile.name);
     final sourceKind = _resolveSourceKind(extension);
+    
+    // Save to local cache for robustness
+    final localCachePath = await _cacheToImportCache(platformFile.name, sourceBytes);
+
     final preferredProfile = _normalizeProfile(
         profile ?? ExtractionProfile.defaultsForSource(sourceKind), sourceKind);
 
     final extracted = await _extractFromSource(
       fileName: platformFile.name,
-      sourceBytes: Uint8List.fromList(bytes),
+      sourceBytes: sourceBytes,
       sourceKind: sourceKind,
       extension: extension,
       extractionProfile: preferredProfile,
-      sourcePath: platformFile.path,
+      sourcePath: localCachePath,
     );
 
     return PaletteImportResult(
@@ -179,7 +185,7 @@ class PaletteImportService {
       fileName: platformFile.name,
       extension: extension,
       sourceKind: sourceKind,
-      sourceBytes: Uint8List.fromList(bytes),
+      sourceBytes: sourceBytes,
       previewBytes: extracted.previewBytes,
       extractionProfile: extracted.extractionProfile,
     );
@@ -668,14 +674,34 @@ class PaletteImportService {
   }
 
   ImportSourceKind _resolveSourceKind(String extension) {
-    final normalized = extension.replaceFirst('.', '');
+    final normalized = extension.replaceFirst('.', '').toLowerCase();
     if (_pdfExtensions.contains(normalized)) {
       return ImportSourceKind.pdf;
     }
     if (_imageExtensions.contains(normalized)) {
       return ImportSourceKind.image;
     }
+    // Also check palette list to be safe, otherwise default to palette
+    if (_paletteExtensions.contains(normalized)) {
+      return ImportSourceKind.palette;
+    }
     return ImportSourceKind.palette;
+  }
+
+  Future<String> _cacheToImportCache(String fileName, Uint8List bytes) async {
+    final baseDir = await _resolveExportBaseDirectory();
+    final cacheDir = Directory(path.join(baseDir.path, _androidCacheFolderName));
+    await cacheDir.create(recursive: true);
+
+    final cleanName = _sanitizeFileName(path.basenameWithoutExtension(fileName));
+    final ext = _normalizeExtension(fileName);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    
+    // Use timestamp to avoid collisions
+    final backupName = 'c_${timestamp}_$cleanName$ext';
+    final output = File(path.join(cacheDir.path, backupName));
+    await output.writeAsBytes(bytes, flush: true);
+    return output.path;
   }
 
   String _buildCameraInvocationError(PlatformException error) {

@@ -3,10 +3,13 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'src/core/branding/upstream_branding.dart';
+import 'src/core/services/settings_service.dart';
 import 'src/i18n/app_localizations.dart';
 import 'src/ui/main_shell.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SettingsService.instance.init();
   runApp(const ColorManagerMobileApp());
 }
 
@@ -18,33 +21,46 @@ class ColorManagerMobileApp extends StatefulWidget {
 }
 
 class _ColorManagerMobileAppState extends State<ColorManagerMobileApp> {
-  ThemeMode _themeMode = ThemeMode.system;
-  Color _themeSeedColor = const Color(0xFF1D4ED8);
-  bool _useMaterialDynamicColor = false;
-  AppLanguagePreference _languagePreference = AppLanguagePreference.system;
+  late ThemeMode _themeMode;
+  late Color _themeSeedColor;
+  late bool _useMaterialDynamicColor;
+  late AppLanguagePreference _languagePreference;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = SettingsService.instance.getThemeMode();
+    _themeSeedColor = SettingsService.instance.getThemeSeedColor();
+    _useMaterialDynamicColor = SettingsService.instance.getUseMaterialDynamicColor();
+    _languagePreference = SettingsService.instance.getLanguagePreference();
+  }
 
   void _setThemeMode(ThemeMode mode) {
     setState(() {
       _themeMode = mode;
     });
+    SettingsService.instance.saveThemeMode(mode);
   }
 
   void _setThemeSeedColor(Color color) {
     setState(() {
       _themeSeedColor = color;
     });
+    SettingsService.instance.saveThemeSeedColor(color);
   }
 
   void _setUseMaterialDynamicColor(bool enabled) {
     setState(() {
       _useMaterialDynamicColor = enabled;
     });
+    SettingsService.instance.saveUseMaterialDynamicColor(enabled);
   }
 
   void _setLanguagePreference(AppLanguagePreference preference) {
     setState(() {
       _languagePreference = preference;
     });
+    SettingsService.instance.saveLanguagePreference(preference);
   }
 
   Locale? get _localeOverride {

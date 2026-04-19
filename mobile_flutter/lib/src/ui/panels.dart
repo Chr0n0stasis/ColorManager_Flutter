@@ -4988,6 +4988,7 @@ class _FullscreenPreviewDialog extends StatefulWidget {
 }
 
 class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
+  final GlobalKey _imageCardKey = GlobalKey();
   _FullscreenViewState _state = _FullscreenViewState.idle;
   
   img.Image? _decodedImage;
@@ -5020,32 +5021,37 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
 
   void _handlePointerPan(DragUpdateDetails details, BoxConstraints constraints) {
     if (_decodedImage == null) return;
-    final w = constraints.maxWidth;
-    final h = constraints.maxHeight;
-    final pctX = (details.localPosition.dx / w).clamp(0.0, 1.0);
-    final pctY = (details.localPosition.dy / h).clamp(0.0, 1.0);
-    
-    final px = (pctX * _decodedImage!.width).toInt().clamp(0, _decodedImage!.width - 1);
-    final py = (pctY * _decodedImage!.height).toInt().clamp(0, _decodedImage!.height - 1);
-    
+    final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(details.globalPosition);
+    final w = renderBox.size.width;
+    final h = renderBox.size.height;
+    final pctX = (localPos.dx / w).clamp(0.0, 1.0);
+    final pctY = (localPos.dy / h).clamp(0.0, 1.0);
+    final px = (pctX * (_decodedImage!.width - 1)).round();
+    final py = (pctY * (_decodedImage!.height - 1)).round();
     final pixel = _decodedImage!.getPixel(px, py);
-    
     setState(() {
-      _pointerPos = details.localPosition;
+      _pointerPos = localPos;
       _pointerColor = Color.fromARGB(pixel.a.toInt(), pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt());
     });
   }
-
   void _handleBoxStart(DragStartDetails details) {
+    final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(details.globalPosition);
     setState(() {
-      _dragStart = details.localPosition;
-      _dragCurrent = details.localPosition;
+      _dragStart = localPos;
+      _dragCurrent = localPos;
     });
   }
 
   void _handleBoxUpdate(DragUpdateDetails details) {
+    final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(details.globalPosition);
     setState(() {
-      _dragCurrent = details.localPosition;
+      _dragCurrent = localPos;
     });
   }
 
@@ -5084,8 +5090,10 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
           heroTag: 'fs_exec_b',
           onPressed: () {
             if (_dragStart != null && _dragCurrent != null) {
-              final w = context.size!.width;
-              final h = context.size!.height;
+              final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
+              if (renderBox == null) return;
+              final w = renderBox.size.width;
+              final h = renderBox.size.height;
               final rect = Rect.fromPoints(_dragStart!, _dragCurrent!).intersect(Rect.fromLTWH(0, 0, w, h));
               final left = (rect.left / w).clamp(0.0, 1.0);
               final top = (rect.top / h).clamp(0.0, 1.0);
@@ -5160,6 +5168,7 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
             onPanUpdate: _state == _FullscreenViewState.boxRange ? _handleBoxUpdate : (d) => _handlePointerPan(d, constraints),
             child: Center(
               child: AspectRatio(
+                key: _imageCardKey,
                 aspectRatio: _decodedImage != null ? _decodedImage!.width / _decodedImage!.height : 4 / 3,
                 child: Stack(
                   fit: StackFit.expand,

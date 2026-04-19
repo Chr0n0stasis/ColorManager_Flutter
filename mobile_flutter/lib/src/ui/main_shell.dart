@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../core/branding/upstream_branding.dart';
+import '../core/models/app_settings_models.dart';
 import '../core/models/color_entry.dart';
 import '../core/models/extraction_profile.dart';
 import '../core/models/import_source_kind.dart';
@@ -23,17 +24,6 @@ enum WorkspacePage {
   preview,
   export,
   settings,
-}
-
-enum ThemeColorSource {
-  file,
-  system,
-  manual,
-}
-
-enum CloudStorageType {
-  disabled,
-  webdav,
 }
 
 class MainShell extends StatefulWidget {
@@ -186,6 +176,14 @@ class _MainShellState extends State<MainShell> {
   Future<void> _loadInitialData() async {
     setState(() => _isBusy = true);
     try {
+      // 1. Load settings (WebDAV etc)
+      final settings = SettingsService.instance;
+      _cloudStorageType = settings.getCloudStorageType();
+      _webdavUrl = settings.getWebdavUrl();
+      _webdavUser = settings.getWebdavUser();
+      _webdavPassword = settings.getWebdavPassword();
+
+      // 2. Load favorites
       final favorites = await _importService.listFavorites();
       if (mounted) {
         setState(() {
@@ -2593,6 +2591,7 @@ class _MainShellState extends State<MainShell> {
                       setState(() {
                         _cloudStorageType = value;
                       });
+                      SettingsService.instance.saveCloudStorageType(value);
                     }
                   },
                 ),
@@ -2606,7 +2605,10 @@ class _MainShellState extends State<MainShell> {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
-                    onChanged: (value) => _webdavUrl = value,
+                    onChanged: (value) {
+                      _webdavUrl = value;
+                      SettingsService.instance.saveWebdavUrl(value);
+                    },
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -2616,7 +2618,10 @@ class _MainShellState extends State<MainShell> {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
-                    onChanged: (value) => _webdavUser = value,
+                    onChanged: (value) {
+                      _webdavUser = value;
+                      SettingsService.instance.saveWebdavUser(value);
+                    },
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -2627,7 +2632,10 @@ class _MainShellState extends State<MainShell> {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
-                    onChanged: (value) => _webdavPassword = value,
+                    onChanged: (value) {
+                      _webdavPassword = value;
+                      SettingsService.instance.saveWebdavPassword(value);
+                    },
                   ),
                 ],
               ],
