@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -2067,7 +2068,15 @@ class _MainShellState extends State<MainShell> {
             constraints.maxWidth < LayoutContract.mediumBreakpoint ? 1.0 : 1 / 3;
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: PageView(
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+              },
+            ),
+            child: PageView(
             padEnds: false,
             controller: PageController(viewportFraction: fraction),
             scrollDirection: Axis.horizontal,
@@ -2090,6 +2099,7 @@ class _MainShellState extends State<MainShell> {
               ),
             ],
           ),
+        ),
         );
       },
     );
