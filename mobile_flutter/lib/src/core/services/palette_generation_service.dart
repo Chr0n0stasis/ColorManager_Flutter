@@ -8,6 +8,8 @@ enum PaletteGenerationKind {
   analogous,
   complementary,
   toWhite,
+  perceptuallyUniform,
+  rainbow,
 }
 
 enum WhiteTemperature {
@@ -43,6 +45,10 @@ class PaletteGenerationService {
           steps: steps,
           temperature: whiteTemperature,
         );
+      case PaletteGenerationKind.perceptuallyUniform:
+        return generatePerceptuallyUniform(steps: steps);
+      case PaletteGenerationKind.rainbow:
+        return generateRainbow(steps: steps);
     }
   }
 
@@ -305,5 +311,36 @@ class PaletteGenerationService {
       ((green + m) * 255).round().clamp(0, 255),
       ((blue + m) * 255).round().clamp(0, 255),
     ];
+  }
+  List<ColorEntry> generatePerceptuallyUniform({required int steps}) {
+    return _interpolateList(
+      anchors: const [
+        [68, 1, 84],
+        [59, 82, 139],
+        [33, 144, 140],
+        [93, 200, 99],
+        [253, 231, 37],
+      ],
+      steps: steps,
+      namePrefix: 'Viridis',
+    );
+  }
+
+  List<ColorEntry> generateRainbow({required int steps}) {
+    return _interpolateList(
+      anchors: const [
+        [0, 0, 127],
+        [0, 0, 255],
+        [0, 127, 255],
+        [0, 255, 255],
+        [127, 255, 127],
+        [255, 255, 0],
+        [255, 127, 0],
+        [255, 0, 0],
+        [127, 0, 0],
+      ],
+      steps: steps,
+      namePrefix: 'Jet',
+    );
   }
 }

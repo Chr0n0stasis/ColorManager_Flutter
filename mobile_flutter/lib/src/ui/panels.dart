@@ -4620,6 +4620,8 @@ String _generationLabel(PaletteGenerationKind kind) {
     PaletteGenerationKind.analogous => 'Analogous',
     PaletteGenerationKind.complementary => 'Complementary',
     PaletteGenerationKind.toWhite => 'Gradient to White',
+    PaletteGenerationKind.perceptuallyUniform => 'Perceptually Uniform',
+    PaletteGenerationKind.rainbow => 'Rainbow/Jet',
   };
 }
 
