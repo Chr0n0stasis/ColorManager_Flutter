@@ -1091,7 +1091,7 @@ class CartPreviewPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _SectionCard(
-            title: 'Palette Generator',
+            title: 'Heatmap Palette Generator',
             child: Column(
               children: [
                 DropdownButtonFormField<PaletteGenerationKind>(
@@ -2303,7 +2303,7 @@ class ExportOptionsPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: 'Palette Generator',
+            title: 'Heatmap Palette Generator',
             expanded: generatorExpanded,
             onExpandedChanged: onGeneratorExpandedChanged,
             child: Column(
@@ -4617,7 +4617,6 @@ String _rgbTextFromHex(String hexCode) {
 String _generationLabel(PaletteGenerationKind kind) {
   return switch (kind) {
     PaletteGenerationKind.twoColorGradient => 'Two-Color Gradient',
-    PaletteGenerationKind.heatmap => 'Heatmap Palette',
     PaletteGenerationKind.analogous => 'Analogous',
     PaletteGenerationKind.complementary => 'Complementary',
     PaletteGenerationKind.toWhite => 'Gradient to White',

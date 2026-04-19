@@ -5,7 +5,6 @@ import '../models/color_entry.dart';
 
 enum PaletteGenerationKind {
   twoColorGradient,
-  heatmap,
   analogous,
   complementary,
   toWhite,
@@ -34,8 +33,6 @@ class PaletteGenerationService {
           endHex: secondaryHex,
           steps: steps,
         );
-      case PaletteGenerationKind.heatmap:
-        return generateHeatmap(baseHex: baseHex, steps: steps);
       case PaletteGenerationKind.analogous:
         return generateAnalogous(baseHex: baseHex, count: math.max(5, steps));
       case PaletteGenerationKind.complementary:
