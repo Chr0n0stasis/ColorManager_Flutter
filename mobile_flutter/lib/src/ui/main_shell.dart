@@ -473,22 +473,27 @@ class _MainShellState extends State<MainShell> {
           _setStatus(_tr('Importing file...'));
         });
 
-        // Parse file standard
-        final palette = await _importService.decodeFile(
+        // Use unified import flow (handles caching, PDF rasterizing, etc)
+        final importResult = await _importService.importFromBytes(
           fileName: fileName,
           bytes: bytes,
         );
+
+        if (importResult == null) {
+          throw Exception('Import process returned no result.');
+        }
 
         setState(() {
           final record = ManagedPaletteFile(
             id: _makeRecordId(fileName),
             fileName: fileName,
-            extension: '',
-            sourceKind: ImportSourceKind.palette,
-            sourceBytes: bytes,
-            palette: palette,
-            extractionProfile:
-                ExtractionProfile.defaultsForSource(ImportSourceKind.palette),
+            extension: importResult.extension,
+            sourceKind: importResult.sourceKind,
+            sourceBytes: importResult.sourceBytes,
+            sourcePath: importResult.sourcePath,
+            previewBytes: importResult.previewBytes,
+            palette: importResult.palette,
+            extractionProfile: importResult.extractionProfile,
             extractionRuns: 1,
             importedAt: DateTime.now(),
           );
@@ -499,7 +504,7 @@ class _MainShellState extends State<MainShell> {
             'Imported {fileName} ({count} colors).',
             params: <String, String>{
               'fileName': fileName,
-              'count': palette.colors.length.toString(),
+              'count': importResult.palette.colors.length.toString(),
             },
           ));
           _isBusy = false;

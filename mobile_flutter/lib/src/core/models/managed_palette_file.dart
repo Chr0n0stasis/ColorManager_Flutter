@@ -19,6 +19,7 @@ class ManagedPaletteFile {
     this.isFavorite = false,
     this.favoriteBackupName,
     this.savedProfile,
+    this.sourcePath,
   });
 
   final String id;
@@ -34,6 +35,7 @@ class ManagedPaletteFile {
   final int extractionRuns;
   final DateTime importedAt;
   final ExtractionProfile? savedProfile;
+  final String? sourcePath;
 
   ManagedPaletteFile copyWith({
     String? id,
@@ -49,6 +51,7 @@ class ManagedPaletteFile {
     int? extractionRuns,
     DateTime? importedAt,
     ExtractionProfile? savedProfile,
+    String? sourcePath,
     bool clearPreview = false,
     bool clearFavoriteBackupName = false,
     bool clearSavedProfile = false,
@@ -70,6 +73,7 @@ class ManagedPaletteFile {
       importedAt: importedAt ?? this.importedAt,
       savedProfile:
           clearSavedProfile ? null : (savedProfile ?? this.savedProfile),
+      sourcePath: sourcePath ?? this.sourcePath,
     );
   }
 }

@@ -3627,46 +3627,64 @@ class _PreviewBox extends StatefulWidget {
 class _PreviewBoxState extends State<_PreviewBox> {
   Offset? _dragStart;
   Offset? _dragCurrent;
+  img.Image? _decodedImage;
 
-  Rect? _dragRect(double width, double height) {
+  @override
+  void initState() {
+    super.initState();
+    _decodeImageAsync();
+  }
+
+  @override
+  void didUpdateWidget(_PreviewBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageBytes != widget.imageBytes) {
+      _decodeImageAsync();
+    }
+  }
+
+  Future<void> _decodeImageAsync() async {
+    final decoded = await compute(img.decodeImage, widget.imageBytes);
+    if (mounted) {
+      setState(() {
+        _decodedImage = decoded;
+      });
+    }
+  }
+
+  _FittedImageHelper? _getHelper(Size containerSize) {
+    if (_decodedImage == null) return null;
+    return _FittedImageHelper(
+      containerSize: containerSize,
+      imageSize: Size(_decodedImage!.width.toDouble(), _decodedImage!.height.toDouble()),
+      fit: BoxFit.contain,
+    );
+  }
+
+  Rect? _dragRect(Size containerSize) {
     final start = _dragStart;
     final current = _dragCurrent;
-    if (start == null || current == null) {
-      return null;
-    }
-    return Rect.fromPoints(start, current).intersect(
-      Rect.fromLTWH(0, 0, width, height),
-    );
+    if (start == null || current == null) return null;
+    return Rect.fromPoints(start, current);
   }
 
-  Rect _profileRect(double width, double height) {
-    final profile = widget.profile;
-    return Rect.fromLTWH(
-      profile.boxLeft * width,
-      profile.boxTop * height,
-      profile.boxWidth * width,
-      profile.boxHeight * height,
-    );
-  }
-
-  void _commitDragRect(double width, double height) {
-    final rect = _dragRect(width, height);
-    if (rect == null || rect.width < 8 || rect.height < 8) {
+  void _commitDragRect(Size containerSize) {
+    final helper = _getHelper(containerSize);
+    final rect = _dragRect(containerSize);
+    if (helper == null || rect == null || rect.width < 4 || rect.height < 4) {
       return;
     }
 
-    final left = (rect.left / width).clamp(0.0, 1.0);
-    final top = (rect.top / height).clamp(0.0, 1.0);
-    final right = (rect.right / width).clamp(0.0, 1.0);
-    final bottom = (rect.bottom / height).clamp(0.0, 1.0);
+    final nStart = helper.localToNormalized(rect.topLeft);
+    final nEnd = helper.localToNormalized(rect.bottomRight);
 
     widget.onProfileChanged(
       widget.profile.copyWith(
         mode: ExtractionMode.boxRange,
-        boxLeft: left,
-        boxTop: top,
-        boxWidth: (right - left).clamp(0.05, 1.0),
-        boxHeight: (bottom - top).clamp(0.05, 1.0),
+        boxLeft: math.min(nStart.dx, nEnd.dx),
+        boxTop: math.min(nStart.dy, nEnd.dy),
+        boxWidth: (nStart.dx - nEnd.dx).abs().clamp(0.01, 1.0),
+        boxHeight: (nStart.dy - nEnd.dy).abs().clamp(0.01, 1.0),
       ),
     );
   }
@@ -3688,7 +3706,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
 
   void _handleBoxPanEnd(double width, double height) {
     if (widget.profile.mode != ExtractionMode.boxRange || _dragStart == null) return;
-    _commitDragRect(width, height);
+    _commitDragRect(Size(width, height));
     setState(() {
       _dragStart = null;
       _dragCurrent = null;
@@ -3705,23 +3723,33 @@ class _PreviewBoxState extends State<_PreviewBox> {
             : math.min(420.0, width * 0.8);
         final height =
             widget.fullHeight ? boundedHeight : math.min(260.0, width * 0.72);
+        
+        final containerSize = Size(width, height);
+        final helper = _getHelper(containerSize);
         final profile = widget.profile;
-        final boxRect = _profileRect(width, height);
-        final dragRect = _dragRect(width, height);
+        
+        Rect? profileRect;
+        if (helper != null) {
+          profileRect = helper.normalizedToLocal(Rect.fromLTWH(
+            profile.boxLeft,
+            profile.boxTop,
+            profile.boxWidth,
+            profile.boxHeight,
+          ));
+        }
+
+        final dragRect = _dragRect(containerSize);
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: profile.mode == ExtractionMode.eyeDropper
+          onTapDown: profile.mode == ExtractionMode.eyeDropper && helper != null
               ? (details) {
-                  final nx = (details.localPosition.dx / width).clamp(0.0, 1.0);
-                  final ny =
-                      (details.localPosition.dy / height).clamp(0.0, 1.0);
+                  final nPos = helper.localToNormalized(details.localPosition);
                   widget.onProfileChanged(
                     profile.copyWith(
-                      eyeDropperX: nx,
-                      eyeDropperY: ny,
+                      eyeDropperX: nPos.dx,
+                      eyeDropperY: nPos.dy,
                     ),
-
                   );
                 }
               : null,
@@ -3751,44 +3779,42 @@ class _PreviewBoxState extends State<_PreviewBox> {
 
                   ),
                 ),
-                if (profile.mode == ExtractionMode.boxRange)
+                if (profile.mode == ExtractionMode.boxRange) ...[
                   Positioned.fill(
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
                       onPanStart: _handleBoxPanStart,
                       onPanUpdate: _handleBoxPanUpdate,
-                      onPanEnd: (details) => _handleBoxPanEnd(width, height),
-                      onPanCancel: () => _handleBoxPanEnd(width, height),
+                      onPanEnd: (details) =>
+                          _handleBoxPanEnd(containerSize.width, containerSize.height),
+                      onPanCancel: () =>
+                          _handleBoxPanEnd(containerSize.width, containerSize.height),
                     ),
-
                   ),
-                if (profile.mode == ExtractionMode.boxRange)
-                  Positioned.fromRect(
-                    rect: boxRect,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
+                  if (profileRect != null)
+                    Positioned.fromRect(
+                      rect: profileRect,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white, width: 2),
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
-
                     ),
-
-                  ),
-                if (profile.mode == ExtractionMode.boxRange && dragRect != null)
-                  Positioned.fromRect(
-                    rect: dragRect,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                            color: const Color(0xFF2563EB), width: 2),
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(6),
+                  if (dragRect != null)
+                    Positioned.fromRect(
+                      rect: dragRect,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: const Color(0xFF2563EB), width: 2),
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
-
                     ),
-
-                  ),
+                ],
                 if (profile.mode == ExtractionMode.eyeDropper)
                   Positioned(
                     left: (profile.eyeDropperX * width)
@@ -5003,55 +5029,72 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
   @override
   void initState() {
     super.initState();
-    _cachedBytes = Uint8List.fromList(widget.file.sourceBytes!);
+    if (widget.file.previewBytes != null) {
+      _cachedBytes = widget.file.previewBytes!;
+    } else {
+      _cachedBytes = widget.file.sourceBytes;
+    }
     _decodeImageAsync();
   }
   
   Future<void> _decodeImageAsync() async {
-    final bytes = widget.file.sourceBytes;
-    if (bytes != null) {
-      final decoded = img.decodeImage(Uint8List.fromList(bytes));
-      if (mounted) {
-        setState(() {
-          _decodedImage = decoded;
-        });
-      }
+    // Critical: Use _cachedBytes which contains the rasterized image (previewBytes) for PDFs
+    final decoded = await compute(img.decodeImage, _cachedBytes);
+    if (mounted) {
+      setState(() {
+        _decodedImage = decoded;
+      });
     }
   }
 
-  void _handlePointerPan(DragUpdateDetails details, BoxConstraints constraints) {
-    if (_decodedImage == null) return;
+  _FittedImageHelper? _getHelper(Size containerSize) {
+    if (_decodedImage == null) return null;
+    return _FittedImageHelper(
+      containerSize: containerSize,
+      imageSize: Size(_decodedImage!.width.toDouble(), _decodedImage!.height.toDouble()),
+      fit: BoxFit.fill, // Fullscreen Dialog uses BoxFit.fill inside AspectRatio
+    );
+  }
+
+  void _handlePointerPan(DragUpdateDetails details, Size containerSize) {
     final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
+    if (renderBox == null || _decodedImage == null) return;
+    
+    final helper = _getHelper(containerSize);
+    if (helper == null) return;
+
+    final nPos = helper.globalToNormalized(details.globalPosition, renderBox);
+    final px = (nPos.dx * (_decodedImage!.width - 1)).round();
+    final py = (nPos.dy * (_decodedImage!.height - 1)).round();
+    
+    final color = _decodedImage!.getPixel(px, py);
     final localPos = renderBox.globalToLocal(details.globalPosition);
-    final w = renderBox.size.width;
-    final h = renderBox.size.height;
-    final pctX = (localPos.dx / w).clamp(0.0, 1.0);
-    final pctY = (localPos.dy / h).clamp(0.0, 1.0);
-    final px = (pctX * (_decodedImage!.width - 1)).round();
-    final py = (pctY * (_decodedImage!.height - 1)).round();
-    final pixel = _decodedImage!.getPixel(px, py);
+
     setState(() {
       _pointerPos = localPos;
-      _pointerColor = Color.fromARGB(pixel.a.toInt(), pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt());
+      _pointerColor = Color.fromARGB(
+        color.a.toInt(),
+        color.r.toInt(),
+        color.g.toInt(),
+        color.b.toInt(),
+      );
     });
   }
+
   void _handleBoxStart(DragStartDetails details) {
     final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    final localPos = renderBox.globalToLocal(details.globalPosition);
     setState(() {
-      _dragStart = localPos;
-      _dragCurrent = localPos;
+      _dragStart = renderBox.globalToLocal(details.globalPosition);
+      _dragCurrent = _dragStart;
     });
   }
 
   void _handleBoxUpdate(DragUpdateDetails details) {
     final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-    final localPos = renderBox.globalToLocal(details.globalPosition);
+    if (renderBox == null || _dragStart == null) return;
     setState(() {
-      _dragCurrent = localPos;
+      _dragCurrent = renderBox.globalToLocal(details.globalPosition);
     });
   }
 
@@ -5092,14 +5135,21 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
             if (_dragStart != null && _dragCurrent != null) {
               final RenderBox? renderBox = _imageCardKey.currentContext?.findRenderObject() as RenderBox?;
               if (renderBox == null) return;
-              final w = renderBox.size.width;
-              final h = renderBox.size.height;
-              final rect = Rect.fromPoints(_dragStart!, _dragCurrent!).intersect(Rect.fromLTWH(0, 0, w, h));
-              final left = (rect.left / w).clamp(0.0, 1.0);
-              final top = (rect.top / h).clamp(0.0, 1.0);
-              final right = (rect.right / w).clamp(0.0, 1.0);
-              final bottom = (rect.bottom / h).clamp(0.0, 1.0);
-              widget.onExtractFromBox(Rect.fromLTRB(left, top, right, bottom));
+              
+              final helper = _getHelper(renderBox.size);
+              if (helper == null) return;
+
+              final nStart = helper.localToNormalized(_dragStart!);
+              final nEnd = helper.localToNormalized(_dragCurrent!);
+
+              final rect = Rect.fromLTRB(
+                math.min(nStart.dx, nEnd.dx),
+                math.min(nStart.dy, nEnd.dy),
+                math.max(nStart.dx, nEnd.dx),
+                math.max(nStart.dy, nEnd.dy),
+              );
+
+              widget.onExtractFromBox(rect);
               Navigator.of(context).pop();
             }
           },
@@ -5164,8 +5214,16 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
         builder: (context, constraints) {
           final isPicker = _state == _FullscreenViewState.colorPicker;
           return GestureDetector(
-            onPanStart: _state == _FullscreenViewState.boxRange ? _handleBoxStart : (d) => _handlePointerPan(DragUpdateDetails(globalPosition: d.globalPosition, localPosition: d.localPosition), constraints),
-            onPanUpdate: _state == _FullscreenViewState.boxRange ? _handleBoxUpdate : (d) => _handlePointerPan(d, constraints),
+            onPanStart: _state == _FullscreenViewState.boxRange
+                ? _handleBoxStart
+                : (d) => _handlePointerPan(
+                    DragUpdateDetails(
+                        globalPosition: d.globalPosition,
+                        localPosition: d.localPosition),
+                    constraints.biggest),
+            onPanUpdate: _state == _FullscreenViewState.boxRange
+                ? _handleBoxUpdate
+                : (d) => _handlePointerPan(d, constraints.biggest),
             child: Center(
               child: AspectRatio(
                 key: _imageCardKey,
@@ -5244,16 +5302,16 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
   }
 }
 
-
 class HeaderDragWrapper extends StatelessWidget {
   const HeaderDragWrapper({
     required this.onDragUpdate,
     required this.onDragEnd,
     required this.child,
+    super.key,
   });
 
-  final GestureDragUpdateCallback onDragUpdate;
-  final GestureDragEndCallback onDragEnd;
+  final void Function(DragUpdateDetails) onDragUpdate;
+  final void Function(DragEndDetails) onDragEnd;
   final Widget child;
 
   @override
@@ -5261,7 +5319,6 @@ class HeaderDragWrapper extends StatelessWidget {
     return Stack(
       children: [
         child,
-        // Transparent overlay on the header area only (~56px top)
         Positioned(
           top: 0,
           left: 0,
@@ -5274,6 +5331,69 @@ class HeaderDragWrapper extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FittedImageHelper {
+  const _FittedImageHelper({
+    required this.containerSize,
+    required this.imageSize,
+    required this.fit,
+  });
+
+  final Size containerSize;
+  final Size imageSize;
+  final BoxFit fit;
+
+  Rect get imageRect {
+    final double srcWidth = imageSize.width;
+    final double srcHeight = imageSize.height;
+    final double dstWidth = containerSize.width;
+    final double dstHeight = containerSize.height;
+
+    final double scaleX = dstWidth / srcWidth;
+    final double scaleY = dstHeight / srcHeight;
+
+    double actualScale;
+    switch (fit) {
+      case BoxFit.fill:
+        return Rect.fromLTWH(0, 0, dstWidth, dstHeight);
+      case BoxFit.contain:
+        actualScale = math.min(scaleX, scaleY);
+      case BoxFit.cover:
+        actualScale = math.max(scaleX, scaleY);
+      default:
+        actualScale = 1.0;
+    }
+
+    final double finalWidth = srcWidth * actualScale;
+    final double finalHeight = srcHeight * actualScale;
+    final double left = (dstWidth - finalWidth) / 2;
+    final double top = (dstHeight - finalHeight) / 2;
+
+    return Rect.fromLTWH(left, top, finalWidth, finalHeight);
+  }
+
+  Offset globalToNormalized(Offset globalPosition, RenderBox renderBox) {
+    final localPos = renderBox.globalToLocal(globalPosition);
+    return localToNormalized(localPos);
+  }
+
+  Offset localToNormalized(Offset localPosition) {
+    final rect = imageRect;
+    final nx = ((localPosition.dx - rect.left) / rect.width).clamp(0.0, 1.0);
+    final ny = ((localPosition.dy - rect.top) / rect.height).clamp(0.0, 1.0);
+    return Offset(nx, ny);
+  }
+
+  Rect normalizedToLocal(Rect normalizedRect) {
+    final rect = imageRect;
+    return Rect.fromLTRB(
+      rect.left + normalizedRect.left * rect.width,
+      rect.top + normalizedRect.top * rect.height,
+      rect.left + normalizedRect.right * rect.width,
+      rect.top + normalizedRect.bottom * rect.height,
     );
   }
 }

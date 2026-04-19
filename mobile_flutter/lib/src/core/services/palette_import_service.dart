@@ -29,6 +29,7 @@ class PaletteImportResult {
     required this.sourceBytes,
     required this.extractionProfile,
     this.previewBytes,
+    this.sourcePath,
   });
 
   final Palette palette;
@@ -38,6 +39,7 @@ class PaletteImportResult {
   final Uint8List sourceBytes;
   final Uint8List? previewBytes;
   final ExtractionProfile extractionProfile;
+  final String? sourcePath;
 }
 
 class PaletteReextractResult {
@@ -188,6 +190,43 @@ class PaletteImportService {
       sourceBytes: sourceBytes,
       previewBytes: extracted.previewBytes,
       extractionProfile: extracted.extractionProfile,
+      sourcePath: localCachePath,
+    );
+  }
+
+  Future<PaletteImportResult?> importFromBytes({
+    required String fileName,
+    required Uint8List bytes,
+    ExtractionProfile? profile,
+  }) async {
+    final extension = _normalizeExtension(fileName);
+    // Use Magic Number detection as primary source of truth, fallback to extension
+    final sourceKind = _detectKindFromMagic(bytes) ?? _resolveSourceKind(extension);
+    
+    // Save to local cache for robustness (Critical for WebDAV and stability)
+    final localCachePath = await _cacheToImportCache(fileName, bytes);
+
+    final preferredProfile = _normalizeProfile(
+        profile ?? ExtractionProfile.defaultsForSource(sourceKind), sourceKind);
+
+    final extracted = await _extractFromSource(
+      fileName: fileName,
+      sourceBytes: bytes,
+      sourceKind: sourceKind,
+      extension: extension,
+      extractionProfile: preferredProfile,
+      sourcePath: localCachePath,
+    );
+
+    return PaletteImportResult(
+      palette: extracted.palette,
+      fileName: fileName,
+      extension: extension,
+      sourceKind: sourceKind,
+      sourceBytes: bytes,
+      previewBytes: extracted.previewBytes,
+      extractionProfile: extracted.extractionProfile,
+      sourcePath: localCachePath,
     );
   }
 
@@ -489,13 +528,16 @@ class PaletteImportService {
     final fallbackName = _fallbackName(fileName);
 
     if (sourceKind == ImportSourceKind.palette) {
+      final palette = _router.decode(
+        extension: extension,
+        bytes: sourceBytes,
+        fallbackName: fallbackName,
+        sourcePath: sourcePath,
+      );
+      
       return _ExtractedPayload(
-        palette: _router.decode(
-          extension: extension,
-          bytes: sourceBytes,
-          fallbackName: fallbackName,
-          sourcePath: sourcePath,
-        ),
+        palette: palette,
+        previewBytes: await _buildPalettePreviewStrip(palette), // Generate the preview strip
         extractionProfile: extractionProfile.copyWith(
           mode: ExtractionMode.wholeFile,
           sampleCount: extractionProfile.sampleCount.clamp(1, 256),
@@ -702,6 +744,59 @@ class PaletteImportService {
     final output = File(path.join(cacheDir.path, backupName));
     await output.writeAsBytes(bytes, flush: true);
     return output.path;
+  }
+
+  ImportSourceKind? _detectKindFromMagic(Uint8List bytes) {
+    if (bytes.length < 4) return null;
+    
+    // PDF Magic Number: %PDF-
+    if (bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+      return ImportSourceKind.pdf;
+    }
+    
+    // PNG Magic Number: 0x89 0x50 0x4E 0x47
+    if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+      return ImportSourceKind.image;
+    }
+    
+    // JPG Magic Number: 0xFF 0xD8 0xFF
+    if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+      return ImportSourceKind.image;
+    }
+    
+    return null;
+  }
+
+  Future<Uint8List?> _buildPalettePreviewStrip(Palette palette) async {
+    if (palette.colors.isEmpty) return null;
+    
+    // Create a strip of colors as a preview image
+    final int itemWidth = 100;
+    final int itemHeight = 100;
+    final int totalWidth = palette.colors.length * itemWidth;
+    
+    final image = img.Image(width: totalWidth, height: itemHeight);
+    
+    for (int i = 0; i < palette.colors.length; i++) {
+        final color = _parseHexColor(palette.colors[i].hexCode);
+        final paintColor = img.ColorRgba8(color.r, color.g, color.b, 255);
+        img.fillRect(
+            image, 
+            x1: i * itemWidth, 
+            y1: 0, 
+            x2: (i + 1) * itemWidth, 
+            y2: itemHeight, 
+            color: paintColor
+        );
+    }
+    
+    return Uint8List.fromList(img.encodePng(image));
+  }
+
+  Color _parseHexColor(String hex) {
+    String cleanHex = hex.replaceFirst('#', '');
+    if (cleanHex.length == 6) cleanHex = 'FF$cleanHex';
+    return Color(int.parse(cleanHex, radix: 16));
   }
 
   String _buildCameraInvocationError(PlatformException error) {
