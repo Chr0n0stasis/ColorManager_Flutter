@@ -2063,70 +2063,31 @@ class _MainShellState extends State<MainShell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= LayoutContract.mediumBreakpoint) {
-          final expandedDesktop =
-              constraints.maxWidth >= LayoutContract.expandedBreakpoint;
-
-          final centerPanel = expandedDesktop
-              ? Row(
-                  children: [
-                    Expanded(flex: 56, child: canvasPanel),
-                    const SizedBox(width: 10),
-                    Expanded(flex: 44, child: inspectorPanel),
-                  ],
-                )
-              : Column(
-                  children: [
-                    Expanded(flex: 52, child: canvasPanel),
-                    const SizedBox(height: 10),
-                    Expanded(flex: 48, child: inspectorPanel),
-                  ],
-                );
-
-          final leftFlex = expandedDesktop
-              ? LayoutContract.expandedLeftFlex
-              : LayoutContract.mediumLeftFlex;
-          final centerFlex = expandedDesktop
-              ? LayoutContract.expandedCenterFlex
-              : LayoutContract.mediumCenterFlex;
-          final rightFlex = expandedDesktop
-              ? LayoutContract.expandedRightFlex
-              : LayoutContract.mediumRightFlex;
-
-          return Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(flex: leftFlex, child: sourcePanel),
-                const SizedBox(width: 12),
-                Expanded(flex: centerFlex, child: centerPanel),
-                const SizedBox(width: 12),
-                Expanded(flex: rightFlex, child: cartSummaryPanel),
-              ],
-            ),
-          );
-        }
-
+        final fraction =
+            constraints.maxWidth < LayoutContract.mediumBreakpoint ? 1.0 : 1 / 3;
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: PageView(
+            padEnds: false,
+            controller: PageController(viewportFraction: fraction),
+            scrollDirection: Axis.horizontal,
             children: [
-              Expanded(
-                flex: 32,
-                child: Row(
-                  children: [
-                    Expanded(child: sourcePanel),
-                    const SizedBox(width: 8),
-                    Expanded(child: cartSummaryPanel),
-                  ],
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: sourcePanel,
               ),
-              const SizedBox(height: 8),
-              Expanded(flex: 34, child: canvasPanel),
-              const SizedBox(height: 8),
-              Expanded(flex: 34, child: inspectorPanel),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: canvasPanel,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: inspectorPanel,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: cartSummaryPanel,
+              ),
             ],
           ),
         );

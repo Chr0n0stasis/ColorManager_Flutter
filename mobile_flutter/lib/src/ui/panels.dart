@@ -3404,8 +3404,6 @@ class _PreviewBox extends StatefulWidget {
 class _PreviewBoxState extends State<_PreviewBox> {
   Offset? _dragStart;
   Offset? _dragCurrent;
-  int _activePointerCount = 0;
-  int? _dragPointerId;
 
   Rect? _dragRect(double width, double height) {
     final start = _dragStart;
@@ -3450,69 +3448,28 @@ class _PreviewBoxState extends State<_PreviewBox> {
     );
   }
 
-  void _handleBoxPointerDown(PointerDownEvent event) {
-    if (widget.profile.mode != ExtractionMode.boxRange) {
-      return;
-    }
-
-    _activePointerCount += 1;
-
-    if (_activePointerCount == 1) {
-      setState(() {
-        _dragPointerId = event.pointer;
-        _dragStart = event.localPosition;
-        _dragCurrent = event.localPosition;
-      });
-      return;
-    }
-
-    if (_dragPointerId != null) {
-      setState(() {
-        _dragPointerId = null;
-        _dragStart = null;
-        _dragCurrent = null;
-      });
-    }
-  }
-
-  void _handleBoxPointerMove(PointerMoveEvent event) {
-    if (widget.profile.mode != ExtractionMode.boxRange) {
-      return;
-    }
-    if (_activePointerCount != 1 || _dragPointerId != event.pointer) {
-      return;
-    }
-
+  void _handleBoxPanStart(DragStartDetails details) {
+    if (widget.profile.mode != ExtractionMode.boxRange) return;
     setState(() {
-      _dragCurrent = event.localPosition;
+      _dragStart = details.localPosition;
+      _dragCurrent = details.localPosition;
     });
   }
 
-  void _handleBoxPointerUp(
-    PointerEvent event,
-    double width,
-    double height,
-  ) {
-    if (widget.profile.mode != ExtractionMode.boxRange) {
-      _activePointerCount = math.max(0, _activePointerCount - 1);
-      return;
-    }
+  void _handleBoxPanUpdate(DragUpdateDetails details) {
+    if (widget.profile.mode != ExtractionMode.boxRange || _dragStart == null) return;
+    setState(() {
+      _dragCurrent = details.localPosition;
+    });
+  }
 
-    final shouldCommit =
-        _dragPointerId == event.pointer && _activePointerCount <= 1;
-    if (shouldCommit) {
-      _commitDragRect(width, height);
-    }
-
-    if (_dragPointerId == event.pointer) {
-      setState(() {
-        _dragPointerId = null;
-        _dragStart = null;
-        _dragCurrent = null;
-      });
-    }
-
-    _activePointerCount = math.max(0, _activePointerCount - 1);
+  void _handleBoxPanEnd(double width, double height) {
+    if (widget.profile.mode != ExtractionMode.boxRange || _dragStart == null) return;
+    _commitDragRect(width, height);
+    setState(() {
+      _dragStart = null;
+      _dragCurrent = null;
+    });
   }
 
   @override
@@ -3571,14 +3528,12 @@ class _PreviewBoxState extends State<_PreviewBox> {
                 ),
                 if (profile.mode == ExtractionMode.boxRange)
                   Positioned.fill(
-                    child: Listener(
+                    child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onPointerDown: _handleBoxPointerDown,
-                      onPointerMove: _handleBoxPointerMove,
-                      onPointerUp: (event) =>
-                          _handleBoxPointerUp(event, width, height),
-                      onPointerCancel: (event) =>
-                          _handleBoxPointerUp(event, width, height),
+                      onPanStart: _handleBoxPanStart,
+                      onPanUpdate: _handleBoxPanUpdate,
+                      onPanEnd: (details) => _handleBoxPanEnd(width, height),
+                      onPanCancel: () => _handleBoxPanEnd(width, height),
                     ),
                   ),
                 if (profile.mode == ExtractionMode.boxRange)
