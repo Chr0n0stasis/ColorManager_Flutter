@@ -2114,19 +2114,23 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final color = cartColors[index];
                       final selected = selectedIndices.contains(index);
-                      final borderColor = selected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.outlineVariant;
+                      final bgHex = _parseHexColor(color.hexCode);
+                      final isDark = bgHex.computeLuminance() < 0.4;
+                      final txColor = isDark ? Colors.white : Colors.black;
+                      final computedBorderColor = selected
+                          ? (isDark ? Colors.white : Colors.black)
+                          : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.1);
 
                       return Card(
                         key: ValueKey<String>(
                             'preview-cart-${color.hexCode}-$index'),
                         margin: const EdgeInsets.only(bottom: 4),
                         clipBehavior: Clip.antiAlias,
+                        color: bgHex,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                           side: BorderSide(
-                            color: borderColor,
+                            color: computedBorderColor,
                             width: selected ? 2 : 1,
                           ),
                         ),
@@ -2134,16 +2138,13 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                           dense: true,
                           onTap:
                               editMode ? () => onToggleSelection(index) : null,
-                          leading: _ColorDot(hexCode: color.hexCode),
-                          title: Text(color.name),
-                          subtitle: Text(color.hexCode),
+                          title: Text(color.name, style: TextStyle(color: txColor, fontWeight: FontWeight.w600)),
+                          subtitle: Text(color.hexCode, style: TextStyle(color: txColor.withValues(alpha: 0.8))),
                           trailing: ReorderableDragStartListener(
                             index: index,
                             child: Icon(
                               Icons.drag_indicator,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: txColor.withValues(alpha: 0.6),
                             ),
                           ),
                         ),
