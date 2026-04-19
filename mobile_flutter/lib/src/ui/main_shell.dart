@@ -14,6 +14,7 @@ import '../core/models/managed_palette_file.dart';
 import '../core/models/palette.dart';
 import '../core/services/palette_generation_service.dart';
 import '../core/services/palette_import_service.dart';
+import '../core/services/settings_service.dart';
 import '../i18n/app_localizations.dart';
 import 'layout_contract.dart';
 import 'panels.dart';
