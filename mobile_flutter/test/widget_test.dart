@@ -1,9 +1,15 @@
 import 'package:color_manager_mobile/color_manager_core.dart';
 import 'package:color_manager_mobile/main.dart';
+import 'package:color_manager_mobile/src/core/services/settings_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('ColorManager app boots on management workspace', (tester) async {
+    // Initialize settings with mock values for the test
+    SharedPreferences.setMockInitialValues({});
+    await SettingsService.instance.init();
+
     await tester.pumpWidget(const ColorManagerMobileApp());
     await tester.pump(const Duration(seconds: 1)); // Give it a moment to initialize
 
