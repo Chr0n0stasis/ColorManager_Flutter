@@ -111,7 +111,15 @@ class _MainShellState extends State<MainShell> {
   bool _exportAsHeatmapGradient = false;
   int _heatmapSteps = 32;
   String _selectedExportExtension = '.json';
-  String _exportFileName = 'Cart Palette';
+  late String _exportFileName = _defaultCartPaletteName;
+
+  String get _defaultCartPaletteName {
+    final now = DateTime.now();
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    final yyyy = now.year.toString();
+    return 'CartPalette_$mm.$dd.$yyyy';
+  }
 
   ThemeColorSource _themeColorSource = ThemeColorSource.file;
 
@@ -1068,7 +1076,7 @@ class _MainShellState extends State<MainShell> {
       rawName = _selectedFile?.palette.name.trim() ?? '';
     }
     if (rawName.isEmpty) {
-      rawName = 'Cart Palette';
+      rawName = _defaultCartPaletteName;
     }
 
     for (final extension in _importService.supportedExportExtensions) {
@@ -1078,7 +1086,7 @@ class _MainShellState extends State<MainShell> {
         break;
       }
     }
-    return rawName.isEmpty ? 'Cart Palette' : rawName;
+    return rawName.isEmpty ? _defaultCartPaletteName : rawName;
   }
 
   PaletteExportPayload _buildCurrentExportPayload() {

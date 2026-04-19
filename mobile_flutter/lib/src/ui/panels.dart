@@ -112,6 +112,18 @@ class MaterialsPanel extends StatelessWidget {
     final hasAnyFile = favoriteFiles.isNotEmpty || importedFiles.isNotEmpty;
     final favoritesListHeight = favoriteFiles.length > 8 ? 340.0 : 230.0;
     final importedListHeight = importedFiles.length > 8 ? 340.0 : 230.0;
+    final headerButtonStyle = OutlinedButton.styleFrom(
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      minimumSize: const Size(0, 34),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    );
+    final headerIconButtonStyle = OutlinedButton.styleFrom(
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      minimumSize: const Size(34, 34),
+      padding: EdgeInsets.zero,
+    );
 
     return _PanelFrame(
       title: 'Management',
@@ -232,62 +244,106 @@ class MaterialsPanel extends StatelessWidget {
                         title: 'Favorites',
                         expanded: favoritesExpanded,
                         onExpandedChanged: onFavoritesExpandedChanged,
-                        headerAction: AnimatedContainer(
+                        headerAction: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutCubic,
-                          width: favoriteEditMode ? 38 : 110,
-                          height: 34,
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return ClipRect(
+                              child: SizeTransition(
+                                sizeFactor: animation,
+                                axis: Axis.horizontal,
+                                axisAlignment: -1,
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
                           child: favoriteEditMode
-                              ? OutlinedButton(
-                                  onPressed: () =>
-                                      onFavoriteEditModeChanged(false),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    shape: const CircleBorder(),
-                                  ),
-                                  child: const Text('X'),
+                              ? Row(
+                                  key: const ValueKey<String>(
+                                      'favorite-actions'),
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Tooltip(
+                                      message: context.tr('Close'),
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            onFavoriteEditModeChanged(false),
+                                        style: headerIconButtonStyle,
+                                        child: const Icon(
+                                          Icons.close_rounded,
+                                          size: 17,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton.icon(
+                                      onPressed: selectedFavoriteIds.isEmpty ||
+                                              isBusy
+                                          ? null
+                                          : () => onUnfavoriteSelectedPressed(),
+                                      style: headerButtonStyle,
+                                      icon: const Icon(
+                                        Icons.star_outline,
+                                        size: 16,
+                                      ),
+                                      label: Text(
+                                        context.tr('Unfavorite Selected'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      onPressed: favoriteFiles.isEmpty
+                                          ? null
+                                          : onSelectAllFavorites,
+                                      style: headerButtonStyle,
+                                      child: Text(
+                                        context.tr('Select All'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      onPressed: favoriteFiles.isEmpty
+                                          ? null
+                                          : onInvertFavoritesSelection,
+                                      style: headerButtonStyle,
+                                      child: Text(
+                                        context.tr('Invert Selection'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                  ],
                                 )
                               : OutlinedButton.icon(
+                                  key: const ValueKey<String>('favorite-edit'),
                                   onPressed: favoriteFiles.isEmpty
                                       ? null
                                       : () => onFavoriteEditModeChanged(true),
+                                  style: headerButtonStyle,
                                   icon:
                                       const Icon(Icons.edit_outlined, size: 16),
-                                  label: Text(context.tr('Edit Favorites')),
+                                  label: Text(
+                                    context.tr('Edit Favorites'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.visible,
+                                    softWrap: false,
+                                  ),
                                 ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (favoriteEditMode)
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: selectedFavoriteIds.isEmpty ||
-                                            isBusy
-                                        ? null
-                                        : () => onUnfavoriteSelectedPressed(),
-                                    icon: const Icon(Icons.star_outline),
-                                    label:
-                                        Text(context.tr('Unfavorite Selected')),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: favoriteFiles.isEmpty
-                                        ? null
-                                        : onSelectAllFavorites,
-                                    child: Text(context.tr('Select All')),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: favoriteFiles.isEmpty
-                                        ? null
-                                        : onInvertFavoritesSelection,
-                                    child: Text(context.tr('Invert Selection')),
-                                  ),
-                                ],
-                              ),
-                            if (favoriteEditMode) const SizedBox(height: 8),
                             SizedBox(
                               height: favoritesListHeight,
                               child: favoriteFiles.isEmpty
@@ -393,62 +449,106 @@ class MaterialsPanel extends StatelessWidget {
                         title: 'Imported Files',
                         expanded: importedExpanded,
                         onExpandedChanged: onImportedExpandedChanged,
-                        headerAction: AnimatedContainer(
+                        headerAction: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutCubic,
-                          width: importedEditMode ? 38 : 122,
-                          height: 34,
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return ClipRect(
+                              child: SizeTransition(
+                                sizeFactor: animation,
+                                axis: Axis.horizontal,
+                                axisAlignment: -1,
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
                           child: importedEditMode
-                              ? OutlinedButton(
-                                  onPressed: () =>
-                                      onImportedEditModeChanged(false),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    shape: const CircleBorder(),
-                                  ),
-                                  child: const Text('X'),
+                              ? Row(
+                                  key: const ValueKey<String>(
+                                      'imported-actions'),
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Tooltip(
+                                      message: context.tr('Close'),
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            onImportedEditModeChanged(false),
+                                        style: headerIconButtonStyle,
+                                        child: const Icon(
+                                          Icons.close_rounded,
+                                          size: 17,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton.icon(
+                                      onPressed:
+                                          selectedImportedIds.isEmpty || isBusy
+                                              ? null
+                                              : onDeleteImportedSelectedPressed,
+                                      style: headerButtonStyle,
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 16,
+                                      ),
+                                      label: Text(
+                                        context.tr('Delete Selected'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      onPressed: importedFiles.isEmpty
+                                          ? null
+                                          : onSelectAllImported,
+                                      style: headerButtonStyle,
+                                      child: Text(
+                                        context.tr('Select All'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      onPressed: importedFiles.isEmpty
+                                          ? null
+                                          : onInvertImportedSelection,
+                                      style: headerButtonStyle,
+                                      child: Text(
+                                        context.tr('Invert Selection'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
+                                    ),
+                                  ],
                                 )
                               : OutlinedButton.icon(
+                                  key: const ValueKey<String>('imported-edit'),
                                   onPressed: importedFiles.isEmpty
                                       ? null
                                       : () => onImportedEditModeChanged(true),
+                                  style: headerButtonStyle,
                                   icon:
                                       const Icon(Icons.edit_outlined, size: 16),
-                                  label:
-                                      Text(context.tr('Edit Imported Files')),
+                                  label: Text(
+                                        context.tr('Edit Imported Files'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.visible,
+                                        softWrap: false,
+                                      ),
                                 ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (importedEditMode)
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed:
-                                        selectedImportedIds.isEmpty || isBusy
-                                            ? null
-                                            : onDeleteImportedSelectedPressed,
-                                    icon: const Icon(Icons.delete_outline),
-                                    label: Text(context.tr('Delete Selected')),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: importedFiles.isEmpty
-                                        ? null
-                                        : onSelectAllImported,
-                                    child: Text(context.tr('Select All')),
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: importedFiles.isEmpty
-                                        ? null
-                                        : onInvertImportedSelection,
-                                    child: Text(context.tr('Invert Selection')),
-                                  ),
-                                ],
-                              ),
-                            if (importedEditMode) const SizedBox(height: 8),
                             SizedBox(
                               height: importedListHeight,
                               child: importedFiles.isEmpty
@@ -658,6 +758,8 @@ class DetailPanel extends StatelessWidget {
       );
     }
 
+    final usesMarkerShape = _chartModeUsesMarkerShape(chartMode);
+
     return _PanelFrame(
       title: 'Preview',
       subtitle:
@@ -792,30 +894,33 @@ class DetailPanel extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(
-                  child: DropdownButtonFormField<PaletteMarkerShape>(
-                    initialValue: previewMarkerShape,
-                    decoration: InputDecoration(
-                      labelText: context.tr('Marker Shape'),
-                      border: const OutlineInputBorder(),
-                      isDense: true,
+                if (usesMarkerShape) ...[
+                  Expanded(
+                    child: DropdownButtonFormField<PaletteMarkerShape>(
+                      initialValue: previewMarkerShape,
+                      decoration: InputDecoration(
+                        labelText: context.tr('Marker Shape'),
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: PaletteMarkerShape.values
+                          .map(
+                            (shape) => DropdownMenuItem<PaletteMarkerShape>(
+                              value: shape,
+                              child:
+                                  Text(context.tr(_markerShapeLabel(shape))),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          onPreviewMarkerShapeChanged(value);
+                        }
+                      },
                     ),
-                    items: PaletteMarkerShape.values
-                        .map(
-                          (shape) => DropdownMenuItem<PaletteMarkerShape>(
-                            value: shape,
-                            child: Text(context.tr(_markerShapeLabel(shape))),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        onPreviewMarkerShapeChanged(value);
-                      }
-                    },
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: Text(
                     'Series $previewSeriesCount · Group $previewGroupCount · Alpha $previewAlphaPercent%',
@@ -1477,6 +1582,8 @@ class PreviewInspectorPanel extends StatelessWidget {
       );
     }
 
+    final usesMarkerShape = _chartModeUsesMarkerShape(chartMode);
+
     return _PanelFrame(
       title: 'Preview Controls',
       subtitle: '',
@@ -1599,28 +1706,31 @@ class PreviewInspectorPanel extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<PaletteMarkerShape>(
-                  initialValue: previewMarkerShape,
-                  decoration: InputDecoration(
-                    labelText: context.tr('Marker Shape'),
-                    border: const OutlineInputBorder(),
-                    isDense: true,
+                if (usesMarkerShape) ...[
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<PaletteMarkerShape>(
+                    initialValue: previewMarkerShape,
+                    decoration: InputDecoration(
+                      labelText: context.tr('Marker Shape'),
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: PaletteMarkerShape.values
+                        .map(
+                          (shape) => DropdownMenuItem<PaletteMarkerShape>(
+                            value: shape,
+                            child:
+                                Text(context.tr(_markerShapeLabel(shape))),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onPreviewMarkerShapeChanged(value);
+                      }
+                    },
                   ),
-                  items: PaletteMarkerShape.values
-                      .map(
-                        (shape) => DropdownMenuItem<PaletteMarkerShape>(
-                          value: shape,
-                          child: Text(context.tr(_markerShapeLabel(shape))),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value != null) {
-                      onPreviewMarkerShapeChanged(value);
-                    }
-                  },
-                ),
+                ],
                 const SizedBox(height: 8),
                 _LabeledSlider(
                   label: 'Series: $previewSeriesCount',
@@ -1722,15 +1832,33 @@ class _FoldCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      context.tr(title),
-                      style: Theme.of(context).textTheme.titleSmall,
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            context.tr(title),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        if (headerAction != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                clipBehavior: Clip.hardEdge,
+                                child: headerAction!,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (headerAction != null) ...[
-                    headerAction!,
-                    const SizedBox(width: 6),
-                  ],
+                  const SizedBox(width: 6),
                   AnimatedRotation(
                     duration: _kAnimationDuration,
                     curve: Curves.easeOutCubic,
@@ -1898,7 +2026,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           shape: const CircleBorder(),
                         ),
-                        child: const Text('X'),
+                        child: const Icon(Icons.close_rounded, size: 18),
                       )
                     : OutlinedButton.icon(
                         onPressed: cartColors.isEmpty
@@ -2526,6 +2654,12 @@ class _GeneratedPaletteBand extends StatelessWidget {
     }
 
     final colorScheme = Theme.of(context).colorScheme;
+    final bandColors = colors
+        .map<Color>((entry) => _parseHexColor(entry.hexCode))
+        .toList(growable: false);
+    final gradientColors = bandColors.length == 1
+        ? <Color>[bandColors.first, bandColors.first]
+        : bandColors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2537,21 +2671,10 @@ class _GeneratedPaletteBand extends StatelessWidget {
         const SizedBox(height: 6),
         Container(
           height: 34,
-          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Row(
-            children: colors
-                .map(
-                  (entry) => Expanded(
-                    child: ColoredBox(
-                      color: _parseHexColor(entry.hexCode),
-                    ),
-                  ),
-                )
-                .toList(growable: false),
+            gradient: LinearGradient(colors: gradientColors),
           ),
         ),
         const SizedBox(height: 4),
@@ -2655,7 +2778,7 @@ class ExportColorListPanel extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           shape: const CircleBorder(),
                         ),
-                        child: const Text('X'),
+                        child: const Icon(Icons.close_rounded, size: 18),
                       )
                     : OutlinedButton.icon(
                         onPressed: cartColors.isEmpty ? null : onEditModeToggle,
@@ -4508,6 +4631,10 @@ String _chartModeLabel(PaletteChartMode mode) {
   };
 }
 
+bool _chartModeUsesMarkerShape(PaletteChartMode mode) {
+  return mode == PaletteChartMode.line || mode == PaletteChartMode.scatter;
+}
+
 String _visionModeLabel(PalettePreviewVisionMode mode) {
   return switch (mode) {
     PalettePreviewVisionMode.normal => 'Normal',
@@ -4524,6 +4651,11 @@ String _markerShapeLabel(PaletteMarkerShape shape) {
     PaletteMarkerShape.square => 'Square',
     PaletteMarkerShape.triangle => 'Triangle',
   };
+}
+
+String _rgbTextFromHex(String hexCode) {
+  final color = _parseHexColor(hexCode);
+  return '${color.r},${color.g},${color.b}';
 }
 
 String _generationLabel(PaletteGenerationKind kind) {
