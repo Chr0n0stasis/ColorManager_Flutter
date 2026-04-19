@@ -1744,7 +1744,7 @@ class PreviewInspectorPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _FoldCard(
-            title: 'Sampling Results',
+            title: 'Sampling Analysis Results',
             expanded: resultExpanded,
             onExpandedChanged: onResultExpandedChanged,
             headerAction: FilledButton.tonalIcon(
@@ -1758,80 +1758,22 @@ class PreviewInspectorPanel extends StatelessWidget {
               ),
             ),
             child: file!.palette.colors.isEmpty
-                ? const SizedBox.shrink()
-                : Table(
-                    border: TableBorder.all(color: Theme.of(context).colorScheme.outlineVariant),
-                    columnWidths: const {
-                      0: FlexColumnWidth(2),
-                      1: FlexColumnWidth(3),
-                    },
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _EmptyState(
+                      title: context.tr('No samples yet'),
+                      description:
+                          context.tr('Pick colors or run extraction first'),
+                    ),
+                  )
+                : Column(
                     children: [
-                      TableRow(
-                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(context.tr('Color Name'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(context.tr('HEX Code'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-
-                        ],
-                      ),
-
-                      for (int i = 0; i < file!.palette.colors.length; i++)
-                        () {
-                          final color = file!.palette.colors[i];
-                          final bgHex = _parseHexColor(color.hexCode);
-                          final isDarkBg = bgHex.computeLuminance() < 0.45;
-                          final textColor = isDarkBg ? Colors.white : Colors.black;
-                          final selected = isColorInCart(color);
-                          final fw = selected ? FontWeight.w900 : FontWeight.w500;
-                          return TableRow(
-                            decoration: BoxDecoration(color: bgHex),
-                            children: [
-                              TableCell(
-                                verticalAlignment: TableCellVerticalAlignment.fill,
-                                child: InkWell(
-                                  onTap: () => onToggleCartColor(color),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      color.name,
-                                      style: TextStyle(color: textColor, fontWeight: fw, fontSize: 13),
-                                    ),
-
-                                  ),
-
-                                ),
-
-                              ),
-
-                              TableCell(
-                                verticalAlignment: TableCellVerticalAlignment.fill,
-                                child: InkWell(
-                                  onTap: () => onToggleCartColor(color),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        Expanded(child: Text(color.hexCode, style: TextStyle(color: textColor, fontWeight: fw, fontSize: 13))),
-                                        if (selected) Icon(Icons.check_circle, size: 16, color: textColor),
-                                      ],
-                                    ),
-
-                                  ),
-
-                                ),
-
-                              ),
-
-                            ],
-                          );
-                        }(),
+                      for (final color in file!.palette.colors)
+                        _SamplingColorItem(
+                          color: color,
+                          isSelected: isColorInCart(color),
+                          onTap: () => onToggleCartColor(color),
+                        ),
                     ],
                   ),
           ),
@@ -4162,7 +4104,7 @@ class _PaletteChartPreview extends StatelessWidget {
               TableRow(
                 decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest),
                 children: [
-                   for (var head in ['ID', 'Component', 'Status', 'Val'])
+                   for (var head in ['ID', 'Hex', 'Name', 'Val'])
                      Padding(
                        padding: const EdgeInsets.all(8.0),
                        child: Text(head, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
@@ -4170,27 +4112,32 @@ class _PaletteChartPreview extends StatelessWidget {
 
                 ],
               ),
-              for (int i = 0; i < dummyData.length; i++)
+              for (int i = 0; i < math.min(colors.length, 12); i++)
                 TableRow(
                   decoration: BoxDecoration(
-                    color: _previewColor(colors[i % colors.length].hexCode, visionMode).withOpacity(0.85),
+                    color: _previewColor(colors[i].hexCode, visionMode).withOpacity(0.85),
                   ),
                   children: [
-                    for (var cell in dummyData[i])
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          cell,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _luminanceOfHex(colors[i % colors.length].hexCode) > 0.45 ? Colors.black : Colors.white,
-                          ),
-
-                        ),
-
-                      ),
-
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text('${(i + 1).toString().padLeft(3, '0')}', 
+                        style: TextStyle(fontSize: 12, color: _luminanceOfHex(colors[i].hexCode) > 0.45 ? Colors.black : Colors.white)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(colors[i].hexCode, 
+                        style: TextStyle(fontSize: 12, color: _luminanceOfHex(colors[i].hexCode) > 0.45 ? Colors.black : Colors.white)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(colors[i].name, 
+                        style: TextStyle(fontSize: 12, color: _luminanceOfHex(colors[i].hexCode) > 0.45 ? Colors.black : Colors.white, overflow: TextOverflow.ellipsis)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text('${(1000 - i * 50).toStringAsFixed(1)}', 
+                        style: TextStyle(fontSize: 12, color: _luminanceOfHex(colors[i].hexCode) > 0.45 ? Colors.black : Colors.white)),
+                    ),
                   ],
                 ),
             ],
@@ -5055,7 +5002,7 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
   @override
   void initState() {
     super.initState();
-    _cachedBytes = _cachedBytes;
+    _cachedBytes = Uint8List.fromList(widget.file.sourceBytes!);
     _decodeImageAsync();
   }
   
@@ -5321,3 +5268,95 @@ class HeaderDragWrapper extends StatelessWidget {
     );
   }
 }
+
+class _SamplingColorItem extends StatelessWidget {
+  const _SamplingColorItem({
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final ColorEntry color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final itemColor = _parseHexColor(color.hexCode);
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected 
+            ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected 
+              ? colorScheme.primary.withValues(alpha: 0.5)
+              : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: itemColor,
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                border: Border.all(
+                  color: colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    color.name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    color.hexCode.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontFamily: "monospace",
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isSelected ? Icons.check_circle : Icons.add_circle_outline,
+              size: 20,
+              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

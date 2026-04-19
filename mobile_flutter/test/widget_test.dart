@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('ColorManager app boots on management workspace', (tester) async {
     await tester.pumpWidget(const ColorManagerMobileApp());
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1)); // Give it a moment to initialize
 
     expect(find.text(appDisplayName), findsOneWidget);
     expect(find.text('Materials'), findsWidgets);

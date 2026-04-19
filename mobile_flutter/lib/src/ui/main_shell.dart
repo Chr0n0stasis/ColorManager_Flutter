@@ -174,6 +174,53 @@ class _MainShellState extends State<MainShell> {
         _statusRotationIndex = (_statusRotationIndex + 1) % 3;
       });
     });
+    
+    // Defer initialization to after first frame to ensure context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadInitialData();
+      }
+    });
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isBusy = true);
+    try {
+      final favorites = await _importService.listFavorites();
+      if (mounted) {
+        setState(() {
+          _files.removeWhere((f) => f.isFavorite); // Avoid duplicates
+          for (final result in favorites) {
+            final record = ManagedPaletteFile(
+              id: 'fav_${result.fileName}_${DateTime.now().millisecondsSinceEpoch}',
+              fileName: result.fileName,
+              extension: result.extension,
+              sourceKind: result.sourceKind,
+              sourceBytes: result.sourceBytes,
+              previewBytes: result.previewBytes,
+              palette: result.palette,
+              extractionProfile: result.extractionProfile,
+              extractionRuns: 1,
+              importedAt: DateTime.now(),
+              isFavorite: true,
+              favoriteBackupName: result.fileName,
+            );
+            _files.add(record);
+          }
+          if (_selectedFile == null && _files.isNotEmpty) {
+            _selectedFile = _files.first;
+          }
+          _isBusy = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isBusy = false;
+          _setStatus('Initialization error: $e'); // Don't use _tr here to be safe
+        });
+      }
+    }
   }
 
   @override
@@ -188,7 +235,13 @@ class _MainShellState extends State<MainShell> {
     String key, {
     Map<String, String> params = const <String, String>{},
   }) {
-    return _l10n.tr(key, params: params);
+    try {
+      final l10n = AppLocalizations.of(context);
+      return l10n.tr(key, params: params);
+    } catch (_) {
+      // Fallback for early boot or errors
+      return key;
+    }
   }
 
   void _setStatus(String message) {

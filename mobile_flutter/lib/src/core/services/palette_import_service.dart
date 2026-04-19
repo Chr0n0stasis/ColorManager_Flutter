@@ -281,6 +281,57 @@ class PaletteImportService {
     }
   }
 
+  Future<List<PaletteImportResult>> listFavorites() async {
+    final baseDir = await _resolveExportBaseDirectory();
+    final favoriteDir =
+        Directory(path.join(baseDir.path, _androidFavoriteFolderName));
+    if (!await favoriteDir.exists()) {
+      return <PaletteImportResult>[];
+    }
+
+    final results = <PaletteImportResult>[];
+    final entities = await favoriteDir.list().toList();
+    for (final entity in entities) {
+      if (entity is File) {
+        try {
+          final bytes = await entity.readAsBytes();
+          final fileName = path.basename(entity.path);
+          final nameParts = fileName.split('_');
+          final recoveredName =
+              nameParts.length > 1 ? nameParts.sublist(1).join('_') : fileName;
+
+          final extension = _normalizeExtension(fileName);
+          final sourceKind = _resolveSourceKind(extension);
+          final profile = ExtractionProfile.defaultsForSource(sourceKind);
+
+          final extracted = await _extractFromSource(
+            fileName: recoveredName,
+            sourceBytes: bytes,
+            sourceKind: sourceKind,
+            extension: extension,
+            extractionProfile: profile,
+            sourcePath: entity.path,
+          );
+
+          results.add(
+            PaletteImportResult(
+              palette: extracted.palette,
+              fileName: recoveredName,
+              extension: extension,
+              sourceKind: sourceKind,
+              sourceBytes: bytes,
+              previewBytes: extracted.previewBytes,
+              extractionProfile: extracted.extractionProfile,
+            ),
+          );
+        } catch (e) {
+          debugPrint('Failed to load favorite ${entity.path}: $e');
+        }
+      }
+    }
+    return results;
+  }
+
   Future<Palette> decodeFile({
     required String fileName,
     required List<int> bytes,
