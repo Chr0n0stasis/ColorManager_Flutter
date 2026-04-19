@@ -30,11 +30,11 @@ jobs:
       - name: Show toolchain version
         run: flutter --version
 
-      - name: Create Android host project if missing
+      - name: Create Android and iOS host projects if missing
         shell: bash
         run: |
-          if [ ! -d "android" ]; then
-            flutter create --platforms=android --no-pub .
+          if [ ! -d "android" ] || [ ! -d "ios" ]; then
+            flutter create --platforms=android,ios --no-pub .
           fi
 
       - name: Install dependencies
@@ -76,11 +76,11 @@ jobs:
       - name: Show toolchain version
         run: flutter --version
 
-      - name: Create iOS host project if missing
+      - name: Create Android and iOS host projects if missing
         shell: bash
         run: |
-          if [ ! -d "ios" ]; then
-            flutter create --platforms=ios --no-pub .
+          if [ ! -d "android" ] || [ ! -d "ios" ]; then
+            flutter create --platforms=android,ios --no-pub .
           fi
 
       - name: Inject iOS camera usage description
