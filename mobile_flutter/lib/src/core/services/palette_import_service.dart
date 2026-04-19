@@ -353,9 +353,13 @@ class PaletteImportService {
     final safeName = _sanitizeFileName(
       payload.palette.name.trim().isEmpty ? 'palette' : payload.palette.name,
     );
+    final timestamp = _buildFileTimestamp(DateTime.now());
 
     final output = File(
-      path.join(exportDirectory.path, '$safeName${payload.extension}'),
+      path.join(
+        exportDirectory.path,
+        '${safeName}_$timestamp${payload.extension}',
+      ),
     );
     await output.writeAsBytes(payload.bytes, flush: true);
     return output;
@@ -829,8 +833,23 @@ class PaletteImportService {
   }
 
   String _sanitizeFileName(String value) {
-    final sanitized = value.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_').trim();
-    return sanitized.isEmpty ? 'palette' : sanitized;
+    final replacedIllegal = value.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    final replacedSpaces = replacedIllegal.replaceAll(RegExp(r'\s+'), '_');
+    final compact = replacedSpaces
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^[._]+|[._]+$'), '')
+        .trim();
+    return compact.isEmpty ? 'palette' : compact;
+  }
+
+  String _buildFileTimestamp(DateTime time) {
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    return '${time.year}'
+        '${twoDigits(time.month)}'
+        '${twoDigits(time.day)}'
+        '_${twoDigits(time.hour)}'
+        '${twoDigits(time.minute)}'
+        '${twoDigits(time.second)}';
   }
 
   String _normalizeFavoriteExtension(String fileName, String? extension) {

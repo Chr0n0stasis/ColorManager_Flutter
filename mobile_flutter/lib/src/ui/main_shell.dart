@@ -77,10 +77,16 @@ class _MainShellState extends State<MainShell> {
 
   ManagedPaletteFile? _selectedFile;
   String _searchText = '';
-  bool _favoritesOnly = false;
   String? _statusMessage;
   int _statusPageIndex = 0;
   bool _isBusy = false;
+
+  bool _managementFavoritesExpanded = true;
+  bool _managementImportedExpanded = true;
+  bool _managementFavoritesEditMode = false;
+  bool _managementImportedEditMode = false;
+  final Set<String> _managementSelectedFavoriteIds = <String>{};
+  final Set<String> _managementSelectedImportedIds = <String>{};
 
   int _activePageIndex = 0;
 
@@ -99,6 +105,7 @@ class _MainShellState extends State<MainShell> {
   String _baseHex = '#1D4ED8';
   String _secondaryHex = '#F97316';
   int _generationSteps = 5;
+  List<ColorEntry> _generatedPalettePreview = <ColorEntry>[];
 
   bool _sortByLightness = false;
   bool _exportAsHeatmapGradient = false;
@@ -207,9 +214,6 @@ class _MainShellState extends State<MainShell> {
     final keyword = _searchText.trim().toLowerCase();
     return List<ManagedPaletteFile>.unmodifiable(
       _files.where((file) {
-        if (_favoritesOnly && !file.isFavorite) {
-          return false;
-        }
         if (keyword.isEmpty) {
           return true;
         }
@@ -217,6 +221,18 @@ class _MainShellState extends State<MainShell> {
             file.palette.name.toLowerCase().contains(keyword) ||
             file.palette.sourceFormat.toLowerCase().contains(keyword);
       }),
+    );
+  }
+
+  List<ManagedPaletteFile> get _favoriteFiles {
+    return List<ManagedPaletteFile>.unmodifiable(
+      _filteredFiles.where((file) => file.isFavorite),
+    );
+  }
+
+  List<ManagedPaletteFile> get _importedFiles {
+    return List<ManagedPaletteFile>.unmodifiable(
+      _filteredFiles.where((file) => !file.isFavorite),
     );
   }
 
@@ -401,11 +417,6 @@ class _MainShellState extends State<MainShell> {
           bytes: bytes,
         );
 
-        final backupName = await _importService.backupFavoriteSource(
-          fileName: fileName,
-          sourceBytes: bytes,
-        );
-
         setState(() {
           final record = ManagedPaletteFile(
             id: _makeRecordId(fileName),
@@ -418,8 +429,6 @@ class _MainShellState extends State<MainShell> {
                 ExtractionProfile.defaultsForSource(ImportSourceKind.palette),
             extractionRuns: 1,
             importedAt: DateTime.now(),
-            isFavorite: true,
-            favoriteBackupName: backupName,
           );
           _files.insert(0, record);
           _selectedFile = record;
@@ -467,9 +476,252 @@ class _MainShellState extends State<MainShell> {
     });
   }
 
-  void _toggleFavoritesOnly(bool value) {
+  void _setManagementFavoritesExpanded(bool expanded) {
     setState(() {
-      _favoritesOnly = value;
+      _managementFavoritesExpanded = expanded;
+    });
+  }
+
+  void _setManagementImportedExpanded(bool expanded) {
+    setState(() {
+      _managementImportedExpanded = expanded;
+    });
+  }
+
+  void _setManagementFavoritesEditMode(bool editMode) {
+    setState(() {
+      _managementFavoritesEditMode = editMode;
+      if (!editMode) {
+        _managementSelectedFavoriteIds.clear();
+      }
+    });
+  }
+
+  void _setManagementImportedEditMode(bool editMode) {
+    setState(() {
+      _managementImportedEditMode = editMode;
+      if (!editMode) {
+        _managementSelectedImportedIds.clear();
+      }
+    });
+  }
+
+  void _toggleManagementFavoriteSelection(String fileId) {
+    setState(() {
+      if (_managementSelectedFavoriteIds.contains(fileId)) {
+        _managementSelectedFavoriteIds.remove(fileId);
+      } else {
+        _managementSelectedFavoriteIds.add(fileId);
+      }
+    });
+  }
+
+  void _toggleManagementImportedSelection(String fileId) {
+    setState(() {
+      if (_managementSelectedImportedIds.contains(fileId)) {
+        _managementSelectedImportedIds.remove(fileId);
+      } else {
+        _managementSelectedImportedIds.add(fileId);
+      }
+    });
+  }
+
+  void _selectAllManagementFavorites() {
+    final ids = _favoriteFiles.map((file) => file.id).toSet();
+    setState(() {
+      _managementSelectedFavoriteIds
+        ..clear()
+        ..addAll(ids);
+    });
+  }
+
+  void _invertManagementFavoritesSelection() {
+    final ids = _favoriteFiles.map((file) => file.id).toSet();
+    final inverted = ids.difference(_managementSelectedFavoriteIds);
+    setState(() {
+      _managementSelectedFavoriteIds
+        ..clear()
+        ..addAll(inverted);
+    });
+  }
+
+  void _selectAllManagementImported() {
+    final ids = _importedFiles.map((file) => file.id).toSet();
+    setState(() {
+      _managementSelectedImportedIds
+        ..clear()
+        ..addAll(ids);
+    });
+  }
+
+  void _invertManagementImportedSelection() {
+    final ids = _importedFiles.map((file) => file.id).toSet();
+    final inverted = ids.difference(_managementSelectedImportedIds);
+    setState(() {
+      _managementSelectedImportedIds
+        ..clear()
+        ..addAll(inverted);
+    });
+  }
+
+  Future<void> _unfavoriteSelectedFiles() async {
+    if (_managementSelectedFavoriteIds.isEmpty) {
+      setState(() {
+        _setStatus(_tr('No file selected.'));
+      });
+      return;
+    }
+
+    final selectedIds = Set<String>.from(_managementSelectedFavoriteIds);
+    final targets = _files
+        .where((file) => selectedIds.contains(file.id) && file.isFavorite)
+        .toList(growable: false);
+
+    if (targets.isEmpty) {
+      setState(() {
+        _setStatus(_tr('No file selected.'));
+      });
+      return;
+    }
+
+    setState(() {
+      _isBusy = true;
+      _setStatus(_tr('Removing favorite...'));
+    });
+
+    final updated = <ManagedPaletteFile>[];
+    var successCount = 0;
+
+    for (final file in targets) {
+      try {
+        await _importService.removeFavoriteBackup(file.favoriteBackupName);
+        updated.add(file.copyWith(
+          isFavorite: false,
+          clearFavoriteBackupName: true,
+        ));
+        successCount += 1;
+      } catch (_) {
+        // Keep processing the remaining files.
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      for (final file in updated) {
+        _replaceRecord(file);
+      }
+      _managementSelectedFavoriteIds.clear();
+      _managementFavoritesEditMode = false;
+      _isBusy = false;
+      _setStatus(_tr(
+        'Unfavorited {count} files.',
+        params: <String, String>{'count': successCount.toString()},
+      ));
+    });
+  }
+
+  void _deleteSelectedImportedFiles() {
+    if (_managementSelectedImportedIds.isEmpty) {
+      setState(() {
+        _setStatus(_tr('No file selected.'));
+      });
+      return;
+    }
+
+    final selectedIds = Set<String>.from(_managementSelectedImportedIds);
+    final removedCount = _files
+        .where((file) => selectedIds.contains(file.id) && !file.isFavorite)
+        .length;
+
+    if (removedCount == 0) {
+      setState(() {
+        _setStatus(_tr('No file selected.'));
+      });
+      return;
+    }
+
+    setState(() {
+      _files.removeWhere(
+        (file) => selectedIds.contains(file.id) && !file.isFavorite,
+      );
+      if (_selectedFile != null && selectedIds.contains(_selectedFile!.id)) {
+        _selectedFile = _files.isEmpty ? null : _files.first;
+      }
+      _managementSelectedImportedIds.clear();
+      _managementImportedEditMode = false;
+      _setStatus(_tr(
+        'Deleted {count} imported files.',
+        params: <String, String>{'count': removedCount.toString()},
+      ));
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
+  void _reorderFavoriteFiles(int oldIndex, int newIndex) {
+    _reorderManagementSection(
+      favoritesSection: true,
+      oldIndex: oldIndex,
+      newIndex: newIndex,
+    );
+  }
+
+  void _reorderImportedFiles(int oldIndex, int newIndex) {
+    _reorderManagementSection(
+      favoritesSection: false,
+      oldIndex: oldIndex,
+      newIndex: newIndex,
+    );
+  }
+
+  void _reorderManagementSection({
+    required bool favoritesSection,
+    required int oldIndex,
+    required int newIndex,
+  }) {
+    final sectionFiles = favoritesSection ? _favoriteFiles : _importedFiles;
+    if (sectionFiles.isEmpty ||
+        oldIndex < 0 ||
+        oldIndex >= sectionFiles.length) {
+      return;
+    }
+
+    setState(() {
+      var targetIndex = newIndex;
+      if (targetIndex > oldIndex) {
+        targetIndex -= 1;
+      }
+      targetIndex = targetIndex.clamp(0, sectionFiles.length - 1);
+
+      final movingId = sectionFiles[oldIndex].id;
+      final targetId = sectionFiles[targetIndex].id;
+
+      final movingGlobalIndex =
+          _files.indexWhere((file) => file.id == movingId);
+      if (movingGlobalIndex < 0) {
+        return;
+      }
+
+      final moving = _files.removeAt(movingGlobalIndex);
+      var insertIndex = _files.indexWhere((file) => file.id == targetId);
+      if (insertIndex < 0) {
+        final lastInSection = _files.lastIndexWhere(
+          (file) => file.isFavorite == favoritesSection,
+        );
+        insertIndex = lastInSection >= 0 ? lastInSection + 1 : _files.length;
+      }
+      _files.insert(insertIndex, moving);
+
+      if (favoritesSection) {
+        _managementSelectedFavoriteIds.clear();
+        _setStatus(_tr('Reordered favorite files.'));
+      } else {
+        _managementSelectedImportedIds.clear();
+        _setStatus(_tr('Reordered imported files.'));
+      }
     });
   }
 
@@ -521,6 +773,8 @@ class _MainShellState extends State<MainShell> {
         );
         _replaceRecord(updated);
         setState(() {
+          _managementSelectedFavoriteIds.remove(updated.id);
+          _managementSelectedImportedIds.remove(updated.id);
           _setStatus(_tr(
             'Removed {fileName} from favorites.',
             params: <String, String>{'fileName': updated.fileName},
@@ -541,6 +795,8 @@ class _MainShellState extends State<MainShell> {
       );
       _replaceRecord(updated);
       setState(() {
+        _managementSelectedFavoriteIds.remove(updated.id);
+        _managementSelectedImportedIds.remove(updated.id);
         _setStatus(_tr(
           'Added {fileName} to favorites and backed up to favorates/{backupName}',
           params: <String, String>{
@@ -715,6 +971,7 @@ class _MainShellState extends State<MainShell> {
       final color = _exportColors[index];
       if (_isPickingBaseColor) {
         _baseHex = color.hexCode.toUpperCase();
+        _generatedPalettePreview = <ColorEntry>[];
         _selectedExportColorIndex = index;
         _isPickingBaseColor = false;
         _isPickingSecondaryColor = false;
@@ -727,6 +984,7 @@ class _MainShellState extends State<MainShell> {
 
       if (_isPickingSecondaryColor) {
         _secondaryHex = color.hexCode.toUpperCase();
+        _generatedPalettePreview = <ColorEntry>[];
         _selectedExportColorIndex = index;
         _isPickingSecondaryColor = false;
         _isPickingBaseColor = false;
@@ -1045,6 +1303,7 @@ class _MainShellState extends State<MainShell> {
   void _setGenerationKind(PaletteGenerationKind value) {
     setState(() {
       _generationKind = value;
+      _generatedPalettePreview = <ColorEntry>[];
       if (value != PaletteGenerationKind.twoColorGradient) {
         _isPickingSecondaryColor = false;
       }
@@ -1054,12 +1313,14 @@ class _MainShellState extends State<MainShell> {
   void _setWhiteTemperature(WhiteTemperature value) {
     setState(() {
       _whiteTemperature = value;
+      _generatedPalettePreview = <ColorEntry>[];
     });
   }
 
   void _setBaseHex(String value) {
     setState(() {
       _baseHex = value;
+      _generatedPalettePreview = <ColorEntry>[];
       _isPickingBaseColor = false;
     });
   }
@@ -1067,6 +1328,7 @@ class _MainShellState extends State<MainShell> {
   void _setSecondaryHex(String value) {
     setState(() {
       _secondaryHex = value;
+      _generatedPalettePreview = <ColorEntry>[];
       _isPickingSecondaryColor = false;
     });
   }
@@ -1074,6 +1336,7 @@ class _MainShellState extends State<MainShell> {
   void _setGenerationSteps(double value) {
     setState(() {
       _generationSteps = value.round().clamp(2, 20);
+      _generatedPalettePreview = <ColorEntry>[];
     });
   }
 
@@ -1266,15 +1529,7 @@ class _MainShellState extends State<MainShell> {
     _applyAutoThemeSeedFromContext();
   }
 
-  void _generateAndReplace() {
-    _generateColors(append: false);
-  }
-
-  void _generateAndAppend() {
-    _generateColors(append: true);
-  }
-
-  void _generateColors({required bool append}) {
+  void _generatePreviewPalette() {
     try {
       final generated = _generationService.generate(
         kind: _generationKind,
@@ -1285,31 +1540,14 @@ class _MainShellState extends State<MainShell> {
       );
 
       setState(() {
-        if (!append) {
-          _exportColors
-            ..clear()
-            ..addAll(generated);
-        } else {
-          _exportColors.addAll(generated);
-        }
-        _rebuildExportKeys();
-        _selectedExportColorIndex = null;
-        _setStatus(append
-            ? _tr(
-                'Appended {count} generated colors.',
-                params: <String, String>{
-                  'count': generated.length.toString(),
-                },
-              )
-            : _tr(
-                'Replaced cart with {count} generated colors.',
-                params: <String, String>{
-                  'count': generated.length.toString(),
-                },
-              ));
+        _generatedPalettePreview = List<ColorEntry>.from(generated);
+        _setStatus(_tr(
+          'Generated {count} preview colors.',
+          params: <String, String>{
+            'count': generated.length.toString(),
+          },
+        ));
       });
-
-      _applyAutoThemeSeedFromContext();
     } catch (error) {
       setState(() {
         _setStatus(_tr(
@@ -1318,6 +1556,56 @@ class _MainShellState extends State<MainShell> {
         ));
       });
     }
+  }
+
+  void _generateAndReplace() {
+    if (_generatedPalettePreview.isEmpty) {
+      setState(() {
+        _setStatus(_tr('Generate preview first.'));
+      });
+      return;
+    }
+
+    setState(() {
+      _exportColors
+        ..clear()
+        ..addAll(_generatedPalettePreview);
+      _rebuildExportKeys();
+      _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
+      _setStatus(_tr(
+        'Replaced cart with {count} generated colors.',
+        params: <String, String>{
+          'count': _generatedPalettePreview.length.toString(),
+        },
+      ));
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
+  void _generateAndAppend() {
+    if (_generatedPalettePreview.isEmpty) {
+      setState(() {
+        _setStatus(_tr('Generate preview first.'));
+      });
+      return;
+    }
+
+    setState(() {
+      _exportColors.addAll(_generatedPalettePreview);
+      _rebuildExportKeys();
+      _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
+      _setStatus(_tr(
+        'Appended {count} generated colors.',
+        params: <String, String>{
+          'count': _generatedPalettePreview.length.toString(),
+        },
+      ));
+    });
+
+    _applyAutoThemeSeedFromContext();
   }
 
   void _replaceRecord(ManagedPaletteFile updated) {
@@ -1664,19 +1952,38 @@ class _MainShellState extends State<MainShell> {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: MaterialsPanel(
-        files: _filteredFiles,
+        favoriteFiles: _favoriteFiles,
+        importedFiles: _importedFiles,
         selectedFile: _selectedFile,
         isBusy: _isBusy,
         searchText: _searchText,
-        favoritesOnly: _favoritesOnly,
         statusMessage: _statusForPage(WorkspacePage.management.index),
+        favoritesExpanded: _managementFavoritesExpanded,
+        importedExpanded: _managementImportedExpanded,
+        favoriteEditMode: _managementFavoritesEditMode,
+        importedEditMode: _managementImportedEditMode,
+        selectedFavoriteIds: _managementSelectedFavoriteIds,
+        selectedImportedIds: _managementSelectedImportedIds,
         headerTitle: _tr(appDisplayName),
         headerSubtitle: _statusWatermarkMessage,
         onImportPressed: _importFile,
         onImportCameraPressed: _importFromCamera,
         onImportCloudPressed: _importFromCloud,
-        onFavoriteFilterChanged: _toggleFavoritesOnly,
         onSearchChanged: _updateSearchText,
+        onFavoritesExpandedChanged: _setManagementFavoritesExpanded,
+        onImportedExpandedChanged: _setManagementImportedExpanded,
+        onFavoriteEditModeChanged: _setManagementFavoritesEditMode,
+        onImportedEditModeChanged: _setManagementImportedEditMode,
+        onToggleFavoriteSelection: _toggleManagementFavoriteSelection,
+        onToggleImportedSelection: _toggleManagementImportedSelection,
+        onSelectAllFavorites: _selectAllManagementFavorites,
+        onInvertFavoritesSelection: _invertManagementFavoritesSelection,
+        onSelectAllImported: _selectAllManagementImported,
+        onInvertImportedSelection: _invertManagementImportedSelection,
+        onUnfavoriteSelectedPressed: _unfavoriteSelectedFiles,
+        onDeleteImportedSelectedPressed: _deleteSelectedImportedFiles,
+        onReorderFavorites: _reorderFavoriteFiles,
+        onReorderImported: _reorderImportedFiles,
         onFileSelected: _selectFile,
         onToggleFavorite: _toggleFileFavorite,
       ),
@@ -1845,6 +2152,7 @@ class _MainShellState extends State<MainShell> {
       secondaryHex: _secondaryHex,
       generationSteps: _generationSteps,
       whiteTemperature: _whiteTemperature,
+      generatedPreviewColors: _generatedPalettePreview,
       cartIsEmpty: _exportColors.isEmpty,
       colorCandidates: _generatorColorCandidates,
       isBaseColorPicking: _isPickingBaseColor,
@@ -1868,6 +2176,7 @@ class _MainShellState extends State<MainShell> {
       onSecondaryHexChanged: _setSecondaryHex,
       onGenerationStepsChanged: _setGenerationSteps,
       onWhiteTemperatureChanged: _setWhiteTemperature,
+      onGeneratePreviewPressed: _generatePreviewPalette,
       onGenerateReplacePressed: _generateAndReplace,
       onGenerateAppendPressed: _generateAndAppend,
     );

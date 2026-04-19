@@ -36,41 +36,83 @@ enum PaletteMarkerShape {
 class MaterialsPanel extends StatelessWidget {
   const MaterialsPanel({
     super.key,
-    required this.files,
+    required this.favoriteFiles,
+    required this.importedFiles,
     required this.selectedFile,
     required this.isBusy,
     required this.searchText,
-    required this.favoritesOnly,
     required this.statusMessage,
+    required this.favoritesExpanded,
+    required this.importedExpanded,
+    required this.favoriteEditMode,
+    required this.importedEditMode,
+    required this.selectedFavoriteIds,
+    required this.selectedImportedIds,
     this.headerTitle,
     this.headerSubtitle,
     required this.onImportPressed,
     required this.onImportCameraPressed,
     required this.onImportCloudPressed,
-    required this.onFavoriteFilterChanged,
     required this.onSearchChanged,
+    required this.onFavoritesExpandedChanged,
+    required this.onImportedExpandedChanged,
+    required this.onFavoriteEditModeChanged,
+    required this.onImportedEditModeChanged,
+    required this.onToggleFavoriteSelection,
+    required this.onToggleImportedSelection,
+    required this.onSelectAllFavorites,
+    required this.onInvertFavoritesSelection,
+    required this.onSelectAllImported,
+    required this.onInvertImportedSelection,
+    required this.onUnfavoriteSelectedPressed,
+    required this.onDeleteImportedSelectedPressed,
+    required this.onReorderFavorites,
+    required this.onReorderImported,
     required this.onFileSelected,
     required this.onToggleFavorite,
   });
 
-  final List<ManagedPaletteFile> files;
+  final List<ManagedPaletteFile> favoriteFiles;
+  final List<ManagedPaletteFile> importedFiles;
   final ManagedPaletteFile? selectedFile;
   final bool isBusy;
   final String searchText;
-  final bool favoritesOnly;
   final String? statusMessage;
+  final bool favoritesExpanded;
+  final bool importedExpanded;
+  final bool favoriteEditMode;
+  final bool importedEditMode;
+  final Set<String> selectedFavoriteIds;
+  final Set<String> selectedImportedIds;
   final String? headerTitle;
   final String? headerSubtitle;
   final Future<void> Function() onImportPressed;
   final Future<void> Function() onImportCameraPressed;
   final Future<void> Function() onImportCloudPressed;
-  final ValueChanged<bool> onFavoriteFilterChanged;
   final ValueChanged<String> onSearchChanged;
+  final ValueChanged<bool> onFavoritesExpandedChanged;
+  final ValueChanged<bool> onImportedExpandedChanged;
+  final ValueChanged<bool> onFavoriteEditModeChanged;
+  final ValueChanged<bool> onImportedEditModeChanged;
+  final ValueChanged<String> onToggleFavoriteSelection;
+  final ValueChanged<String> onToggleImportedSelection;
+  final VoidCallback onSelectAllFavorites;
+  final VoidCallback onInvertFavoritesSelection;
+  final VoidCallback onSelectAllImported;
+  final VoidCallback onInvertImportedSelection;
+  final Future<void> Function() onUnfavoriteSelectedPressed;
+  final VoidCallback onDeleteImportedSelectedPressed;
+  final void Function(int oldIndex, int newIndex) onReorderFavorites;
+  final void Function(int oldIndex, int newIndex) onReorderImported;
   final ValueChanged<ManagedPaletteFile> onFileSelected;
   final Future<void> Function(ManagedPaletteFile) onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
+    final hasAnyFile = favoriteFiles.isNotEmpty || importedFiles.isNotEmpty;
+    final favoritesListHeight = favoriteFiles.length > 8 ? 340.0 : 230.0;
+    final importedListHeight = importedFiles.length > 8 ? 340.0 : 230.0;
+
     return _PanelFrame(
       title: 'Management',
       subtitle: '',
@@ -172,78 +214,354 @@ class MaterialsPanel extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilterChip(
-              selected: favoritesOnly,
-              onSelected: onFavoriteFilterChanged,
-              label: Text(context.tr('Favorites Only')),
-            ),
-          ),
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
             const SizedBox(height: 6),
             _StatusText(message: statusMessage!),
           ],
           const SizedBox(height: 8),
           Expanded(
-            child: files.isEmpty
+            child: !hasAnyFile
                 ? const _EmptyState(
                     title: 'No files yet',
                     description:
                         'Supports JSON/CSV/GPL/CPT/ASE/PAL, images and PDF.',
                   )
-                : ListView.separated(
-                    itemCount: files.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
-                    itemBuilder: (context, index) {
-                      final file = files[index];
-                      final selected = selectedFile?.id == file.id;
-                      final firstHex = file.palette.previewColors.isEmpty
-                          ? '#CCCCCC'
-                          : file.palette.previewColors.first.hexCode;
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        clipBehavior: Clip.antiAlias,
-                        child: ListTile(
-                          selected: selected,
-                          leading: _ColorDot(hexCode: firstHex),
-                          title: Text(
-                            file.fileName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            context.tr(
-                              '{count} colors · {format} · {mode} · Re-sampled {runs} times',
-                              params: <String, String>{
-                                'count': file.palette.colors.length.toString(),
-                                'format':
-                                    file.palette.sourceFormat.toUpperCase(),
-                                'mode': context.tr(
-                                    _modeLabel(file.extractionProfile.mode)),
-                                'runs': file.extractionRuns.toString(),
-                              },
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: IconButton(
-                            tooltip: file.isFavorite
-                                ? context.tr('Remove favorite')
-                                : context.tr('Add favorite'),
-                            icon: Icon(
-                              file.isFavorite ? Icons.star : Icons.star_border,
-                              color: file.isFavorite
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                            ),
-                            onPressed: () => onToggleFavorite(file),
-                          ),
-                          onTap: () => onFileSelected(file),
+                : ListView(
+                    children: [
+                      _FoldCard(
+                        title: 'Favorites',
+                        expanded: favoritesExpanded,
+                        onExpandedChanged: onFavoritesExpandedChanged,
+                        headerAction: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          width: favoriteEditMode ? 38 : 110,
+                          height: 34,
+                          child: favoriteEditMode
+                              ? OutlinedButton(
+                                  onPressed: () =>
+                                      onFavoriteEditModeChanged(false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    shape: const CircleBorder(),
+                                  ),
+                                  child: const Text('X'),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: favoriteFiles.isEmpty
+                                      ? null
+                                      : () => onFavoriteEditModeChanged(true),
+                                  icon:
+                                      const Icon(Icons.edit_outlined, size: 16),
+                                  label: Text(context.tr('Edit Favorites')),
+                                ),
                         ),
-                      );
-                    },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (favoriteEditMode)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: selectedFavoriteIds.isEmpty ||
+                                            isBusy
+                                        ? null
+                                        : () => onUnfavoriteSelectedPressed(),
+                                    icon: const Icon(Icons.star_outline),
+                                    label:
+                                        Text(context.tr('Unfavorite Selected')),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: favoriteFiles.isEmpty
+                                        ? null
+                                        : onSelectAllFavorites,
+                                    child: Text(context.tr('Select All')),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: favoriteFiles.isEmpty
+                                        ? null
+                                        : onInvertFavoritesSelection,
+                                    child: Text(context.tr('Invert Selection')),
+                                  ),
+                                ],
+                              ),
+                            if (favoriteEditMode) const SizedBox(height: 8),
+                            SizedBox(
+                              height: favoritesListHeight,
+                              child: favoriteFiles.isEmpty
+                                  ? const _EmptyState(
+                                      title: 'No favorites yet',
+                                      description:
+                                          'Tap star in Imported Files to move items here.',
+                                    )
+                                  : ReorderableListView.builder(
+                                      itemCount: favoriteFiles.length,
+                                      onReorder: onReorderFavorites,
+                                      buildDefaultDragHandles: false,
+                                      itemBuilder: (context, index) {
+                                        final file = favoriteFiles[index];
+                                        final selectedInEdit =
+                                            selectedFavoriteIds
+                                                .contains(file.id);
+                                        final selected = favoriteEditMode
+                                            ? selectedInEdit
+                                            : selectedFile?.id == file.id;
+                                        final firstHex =
+                                            file.palette.previewColors.isEmpty
+                                                ? '#CCCCCC'
+                                                : file.palette.previewColors
+                                                    .first.hexCode;
+                                        final borderColor = selected
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .outlineVariant;
+                                        return Card(
+                                          key: ValueKey<String>(
+                                              'favorite-file-${file.id}'),
+                                          margin:
+                                              const EdgeInsets.only(bottom: 4),
+                                          clipBehavior: Clip.antiAlias,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            side: BorderSide(
+                                              color: borderColor,
+                                              width: selected ? 2 : 1,
+                                            ),
+                                          ),
+                                          child: ListTile(
+                                            selected: selected,
+                                            onTap: favoriteEditMode
+                                                ? () =>
+                                                    onToggleFavoriteSelection(
+                                                      file.id,
+                                                    )
+                                                : () => onFileSelected(file),
+                                            leading:
+                                                _ColorDot(hexCode: firstHex),
+                                            title: Text(
+                                              file.fileName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            subtitle: Text(
+                                              context.tr(
+                                                '{count} colors · {format} · {mode} · Re-sampled {runs} times',
+                                                params: <String, String>{
+                                                  'count': file
+                                                      .palette.colors.length
+                                                      .toString(),
+                                                  'format': file
+                                                      .palette.sourceFormat
+                                                      .toUpperCase(),
+                                                  'mode': context.tr(_modeLabel(
+                                                      file.extractionProfile
+                                                          .mode)),
+                                                  'runs': file.extractionRuns
+                                                      .toString(),
+                                                },
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            trailing: favoriteEditMode
+                                                ? ReorderableDragStartListener(
+                                                    index: index,
+                                                    child: Icon(
+                                                      Icons.drag_indicator,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _FoldCard(
+                        title: 'Imported Files',
+                        expanded: importedExpanded,
+                        onExpandedChanged: onImportedExpandedChanged,
+                        headerAction: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          width: importedEditMode ? 38 : 122,
+                          height: 34,
+                          child: importedEditMode
+                              ? OutlinedButton(
+                                  onPressed: () =>
+                                      onImportedEditModeChanged(false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    shape: const CircleBorder(),
+                                  ),
+                                  child: const Text('X'),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: importedFiles.isEmpty
+                                      ? null
+                                      : () => onImportedEditModeChanged(true),
+                                  icon:
+                                      const Icon(Icons.edit_outlined, size: 16),
+                                  label:
+                                      Text(context.tr('Edit Imported Files')),
+                                ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (importedEditMode)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed:
+                                        selectedImportedIds.isEmpty || isBusy
+                                            ? null
+                                            : onDeleteImportedSelectedPressed,
+                                    icon: const Icon(Icons.delete_outline),
+                                    label: Text(context.tr('Delete Selected')),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: importedFiles.isEmpty
+                                        ? null
+                                        : onSelectAllImported,
+                                    child: Text(context.tr('Select All')),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: importedFiles.isEmpty
+                                        ? null
+                                        : onInvertImportedSelection,
+                                    child: Text(context.tr('Invert Selection')),
+                                  ),
+                                ],
+                              ),
+                            if (importedEditMode) const SizedBox(height: 8),
+                            SizedBox(
+                              height: importedListHeight,
+                              child: importedFiles.isEmpty
+                                  ? const _EmptyState(
+                                      title: 'No imported files',
+                                      description:
+                                          'Use the + button above to import files.',
+                                    )
+                                  : ReorderableListView.builder(
+                                      itemCount: importedFiles.length,
+                                      onReorder: onReorderImported,
+                                      buildDefaultDragHandles: false,
+                                      itemBuilder: (context, index) {
+                                        final file = importedFiles[index];
+                                        final selectedInEdit =
+                                            selectedImportedIds
+                                                .contains(file.id);
+                                        final selected = importedEditMode
+                                            ? selectedInEdit
+                                            : selectedFile?.id == file.id;
+                                        final firstHex =
+                                            file.palette.previewColors.isEmpty
+                                                ? '#CCCCCC'
+                                                : file.palette.previewColors
+                                                    .first.hexCode;
+                                        final borderColor = selected
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .outlineVariant;
+
+                                        return Card(
+                                          key: ValueKey<String>(
+                                              'imported-file-${file.id}'),
+                                          margin:
+                                              const EdgeInsets.only(bottom: 4),
+                                          clipBehavior: Clip.antiAlias,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            side: BorderSide(
+                                              color: borderColor,
+                                              width: selected ? 2 : 1,
+                                            ),
+                                          ),
+                                          child: ListTile(
+                                            selected: selected,
+                                            onTap: importedEditMode
+                                                ? () =>
+                                                    onToggleImportedSelection(
+                                                      file.id,
+                                                    )
+                                                : () => onFileSelected(file),
+                                            leading:
+                                                _ColorDot(hexCode: firstHex),
+                                            title: Text(
+                                              file.fileName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            subtitle: Text(
+                                              context.tr(
+                                                '{count} colors · {format} · {mode} · Re-sampled {runs} times',
+                                                params: <String, String>{
+                                                  'count': file
+                                                      .palette.colors.length
+                                                      .toString(),
+                                                  'format': file
+                                                      .palette.sourceFormat
+                                                      .toUpperCase(),
+                                                  'mode': context.tr(_modeLabel(
+                                                      file.extractionProfile
+                                                          .mode)),
+                                                  'runs': file.extractionRuns
+                                                      .toString(),
+                                                },
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            trailing: importedEditMode
+                                                ? ReorderableDragStartListener(
+                                                    index: index,
+                                                    child: Icon(
+                                                      Icons.drag_indicator,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                                  )
+                                                : IconButton(
+                                                    tooltip: context
+                                                        .tr('Add favorite'),
+                                                    icon: const Icon(
+                                                      Icons.star_border,
+                                                    ),
+                                                    onPressed: isBusy
+                                                        ? null
+                                                        : () =>
+                                                            onToggleFavorite(
+                                                                file),
+                                                  ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ],
@@ -1727,6 +2045,7 @@ class ExportOptionsPanel extends StatelessWidget {
     required this.secondaryHex,
     required this.generationSteps,
     required this.whiteTemperature,
+    required this.generatedPreviewColors,
     required this.cartIsEmpty,
     required this.colorCandidates,
     required this.isBaseColorPicking,
@@ -1750,6 +2069,7 @@ class ExportOptionsPanel extends StatelessWidget {
     required this.onSecondaryHexChanged,
     required this.onGenerationStepsChanged,
     required this.onWhiteTemperatureChanged,
+    required this.onGeneratePreviewPressed,
     required this.onGenerateReplacePressed,
     required this.onGenerateAppendPressed,
   });
@@ -1767,6 +2087,7 @@ class ExportOptionsPanel extends StatelessWidget {
   final String secondaryHex;
   final int generationSteps;
   final WhiteTemperature whiteTemperature;
+  final List<ColorEntry> generatedPreviewColors;
   final bool cartIsEmpty;
   final List<ColorEntry> colorCandidates;
   final bool isBaseColorPicking;
@@ -1790,6 +2111,7 @@ class ExportOptionsPanel extends StatelessWidget {
   final ValueChanged<String> onSecondaryHexChanged;
   final ValueChanged<double> onGenerationStepsChanged;
   final ValueChanged<WhiteTemperature> onWhiteTemperatureChanged;
+  final VoidCallback onGeneratePreviewPressed;
   final VoidCallback onGenerateReplacePressed;
   final VoidCallback onGenerateAppendPressed;
 
@@ -2004,11 +2326,23 @@ class ExportOptionsPanel extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: isBusy ? null : onGeneratePreviewPressed,
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: Text(context.tr('Generate Preview')),
+                ),
+                if (generatedPreviewColors.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _GeneratedPaletteBand(colors: generatedPreviewColors),
+                ],
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: FilledButton.tonalIcon(
-                        onPressed: isBusy ? null : onGenerateReplacePressed,
+                        onPressed: isBusy || generatedPreviewColors.isEmpty
+                            ? null
+                            : onGenerateReplacePressed,
                         icon: const Icon(Icons.auto_awesome_outlined),
                         label: Text(context.tr('Replace Export Cart')),
                       ),
@@ -2016,7 +2350,9 @@ class ExportOptionsPanel extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton.tonalIcon(
-                        onPressed: isBusy ? null : onGenerateAppendPressed,
+                        onPressed: isBusy || generatedPreviewColors.isEmpty
+                            ? null
+                            : onGenerateAppendPressed,
                         icon: const Icon(Icons.add),
                         label: Text(context.tr('Append To Export Cart')),
                       ),
@@ -2174,6 +2510,65 @@ class _PickHexField extends StatelessWidget {
     return Opacity(
       opacity: 0.55,
       child: field,
+    );
+  }
+}
+
+class _GeneratedPaletteBand extends StatelessWidget {
+  const _GeneratedPaletteBand({required this.colors});
+
+  final List<ColorEntry> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    if (colors.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          context.tr('Generated Palette Preview'),
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 34,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Row(
+            children: colors
+                .map(
+                  (entry) => Expanded(
+                    child: ColoredBox(
+                      color: _parseHexColor(entry.hexCode),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              colors.first.hexCode,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const Spacer(),
+            Text(
+              colors.last.hexCode,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -4165,9 +4560,9 @@ Color _previewColor(String hexCode, PalettePreviewVisionMode mode) {
     return raw;
   }
 
-  final r = raw.r.toDouble();
-  final g = raw.g.toDouble();
-  final b = raw.b.toDouble();
+  final r = raw.red.toDouble();
+  final g = raw.green.toDouble();
+  final b = raw.blue.toDouble();
 
   if (mode == PalettePreviewVisionMode.grayscale) {
     final gray = _clampChannel(0.299 * r + 0.587 * g + 0.114 * b);
