@@ -113,6 +113,7 @@ class _MainShellState extends State<MainShell> {
   int _heatmapSteps = 32;
   String _selectedExportExtension = '.json';
   late String _exportFileName = _defaultCartPaletteName;
+  final ScrollController _previewScrollController = ScrollController();
 
   String get _defaultCartPaletteName {
     final now = DateTime.now();
@@ -2071,6 +2072,7 @@ class _MainShellState extends State<MainShell> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < LayoutContract.mediumBreakpoint;
         
+        final screenWidth = constraints.maxWidth;
         if (isMobile) {
           return Scaffold(
             drawer: Theme(
@@ -2118,39 +2120,61 @@ class _MainShellState extends State<MainShell> {
           );
         }
 
+        final wSide = screenWidth * 2 / 9;
+        final wMain = screenWidth * 7 / 18;
+
         return Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: sourcePanel,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollEndNotification) {
+                final offset = _previewScrollController.offset;
+                final threshold = wSide / 2;
+                if (offset > 0 && offset < wSide) {
+                  if (offset < threshold) {
+                    _previewScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                  } else {
+                    _previewScrollController.animateTo(wSide, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+                  }
+                }
+              }
+              return false;
+            },
+            child: ListView(
+              controller: _previewScrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              children: [
+                SizedBox(
+                  width: wSide,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: sourcePanel,
+                  ),
                 ),
-              ),
-              Expanded(
-                flex: 5,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: canvasPanel,
+                SizedBox(
+                  width: wMain,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: canvasPanel,
+                  ),
                 ),
-              ),
-              Expanded(
-                flex: 5,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: inspectorPanel,
+                SizedBox(
+                  width: wMain,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: inspectorPanel,
+                  ),
                 ),
-              ),
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: cartSummaryPanel,
+                SizedBox(
+                  width: wSide,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: cartSummaryPanel,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -2243,33 +2267,23 @@ class _MainShellState extends State<MainShell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < LayoutContract.mediumBreakpoint) {
-          return Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(flex: 44, child: optionsPanel),
-                const SizedBox(height: 10),
-                Expanded(flex: 56, child: colorsPanel),
-              ],
-            ),
-          );
-        }
-
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                flex: 45,
-                child: optionsPanel,
+                flex: 44,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: optionsPanel,
+                ),
               ),
-              const SizedBox(width: 12),
               Expanded(
-                flex: 55,
-                child: colorsPanel,
+                flex: 56,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: colorsPanel,
+                ),
               ),
             ],
           ),

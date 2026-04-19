@@ -182,6 +182,7 @@ class MaterialsPanel extends StatelessWidget {
                       Icons.add,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
+
                     tooltip: context.tr('Import'),
                     onSelected: (value) {
                       if (value == 'local') {
@@ -202,7 +203,9 @@ class MaterialsPanel extends StatelessWidget {
                             Text(context.tr('Import from Local')),
                           ],
                         ),
+
                       ),
+
                       PopupMenuItem(
                         value: 'camera',
                         child: Row(
@@ -212,7 +215,9 @@ class MaterialsPanel extends StatelessWidget {
                             Text(context.tr('Import from Camera')),
                           ],
                         ),
+
                       ),
+
                       PopupMenuItem(
                         value: 'cloud',
                         child: Row(
@@ -222,7 +227,9 @@ class MaterialsPanel extends StatelessWidget {
                             Text(context.tr('Import from Cloud Storage')),
                           ],
                         ),
+
                       ),
+
                     ],
                   ),
                 ),
@@ -260,7 +267,9 @@ class MaterialsPanel extends StatelessWidget {
                                   opacity: animation,
                                   child: child,
                                 ),
+
                               ),
+
                             );
                           },
                           child: favoriteEditMode
@@ -279,8 +288,11 @@ class MaterialsPanel extends StatelessWidget {
                                           Icons.close_rounded,
                                           size: 17,
                                         ),
+
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton.icon(
                                       onPressed: selectedFavoriteIds.isEmpty ||
@@ -292,13 +304,16 @@ class MaterialsPanel extends StatelessWidget {
                                         Icons.star_outline,
                                         size: 16,
                                       ),
+
                                       label: Text(
                                         context.tr('Unfavorite Selected'),
                                         maxLines: 1,
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton(
                                       onPressed: favoriteFiles.isEmpty
@@ -311,7 +326,9 @@ class MaterialsPanel extends StatelessWidget {
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton(
                                       onPressed: favoriteFiles.isEmpty
@@ -324,7 +341,9 @@ class MaterialsPanel extends StatelessWidget {
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                   ],
                                 )
                               : OutlinedButton.icon(
@@ -341,8 +360,11 @@ class MaterialsPanel extends StatelessWidget {
                                     overflow: TextOverflow.visible,
                                     softWrap: false,
                                   ),
+
                                 ),
+
                         ),
+
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -391,7 +413,9 @@ class MaterialsPanel extends StatelessWidget {
                                               color: borderColor,
                                               width: selected ? 2 : 1,
                                             ),
+
                                           ),
+
                                           child: ListTile(
                                             selected: selected,
                                             onTap: favoriteEditMode
@@ -407,6 +431,7 @@ class MaterialsPanel extends StatelessWidget {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
+
                                             subtitle: Text(
                                               context.tr(
                                                 '{count} colors · {format} · {mode} · Re-sampled {runs} times',
@@ -424,9 +449,11 @@ class MaterialsPanel extends StatelessWidget {
                                                       .toString(),
                                                 },
                                               ),
+
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
+
                                             trailing: favoriteEditMode
                                                 ? ReorderableDragStartListener(
                                                     index: index,
@@ -436,16 +463,22 @@ class MaterialsPanel extends StatelessWidget {
                                                           .colorScheme
                                                           .onSurfaceVariant,
                                                     ),
+
                                                   )
                                                 : null,
                                           ),
+
                                         );
                                       },
                                     ),
+
                             ),
+
                           ],
                         ),
+
                       ),
+
                       const SizedBox(height: 8),
                       _FoldCard(
                         title: 'Imported Files',
@@ -465,7 +498,9 @@ class MaterialsPanel extends StatelessWidget {
                                   opacity: animation,
                                   child: child,
                                 ),
+
                               ),
+
                             );
                           },
                           child: importedEditMode
@@ -484,8 +519,11 @@ class MaterialsPanel extends StatelessWidget {
                                           Icons.close_rounded,
                                           size: 17,
                                         ),
+
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton.icon(
                                       onPressed:
@@ -497,13 +535,16 @@ class MaterialsPanel extends StatelessWidget {
                                         Icons.delete_outline,
                                         size: 16,
                                       ),
+
                                       label: Text(
                                         context.tr('Delete Selected'),
                                         maxLines: 1,
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton(
                                       onPressed: importedFiles.isEmpty
@@ -516,7 +557,9 @@ class MaterialsPanel extends StatelessWidget {
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                     const SizedBox(width: 6),
                                     OutlinedButton(
                                       onPressed: importedFiles.isEmpty
@@ -529,7 +572,9 @@ class MaterialsPanel extends StatelessWidget {
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                     ),
+
                                   ],
                                 )
                               : OutlinedButton.icon(
@@ -546,8 +591,11 @@ class MaterialsPanel extends StatelessWidget {
                                         overflow: TextOverflow.visible,
                                         softWrap: false,
                                       ),
+
                                 ),
+
                         ),
+
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -597,7 +645,9 @@ class MaterialsPanel extends StatelessWidget {
                                               color: borderColor,
                                               width: selected ? 2 : 1,
                                             ),
+
                                           ),
+
                                           child: ListTile(
                                             selected: selected,
                                             onTap: importedEditMode
@@ -613,6 +663,7 @@ class MaterialsPanel extends StatelessWidget {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
+
                                             subtitle: Text(
                                               context.tr(
                                                 '{count} colors · {format} · {mode} · Re-sampled {runs} times',
@@ -630,9 +681,11 @@ class MaterialsPanel extends StatelessWidget {
                                                       .toString(),
                                                 },
                                               ),
+
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
+
                                             trailing: importedEditMode
                                                 ? ReorderableDragStartListener(
                                                     index: index,
@@ -642,6 +695,7 @@ class MaterialsPanel extends StatelessWidget {
                                                           .colorScheme
                                                           .onSurfaceVariant,
                                                     ),
+
                                                   )
                                                 : IconButton(
                                                     tooltip: context
@@ -649,20 +703,27 @@ class MaterialsPanel extends StatelessWidget {
                                                     icon: const Icon(
                                                       Icons.star_border,
                                                     ),
+
                                                     onPressed: isBusy
                                                         ? null
                                                         : () =>
                                                             onToggleFavorite(
                                                                 file),
                                                   ),
+
                                           ),
+
                                         );
                                       },
                                     ),
+
                             ),
+
                           ],
                         ),
+
                       ),
+
                     ],
                   ),
           ),
@@ -837,7 +898,9 @@ class DetailPanel extends StatelessWidget {
                         selected: isColorInCart(color),
                         onPressed: () => onToggleCartColor(color),
                       ),
+
                     ),
+
                   )
                   .toList(growable: false),
             ),
@@ -852,12 +915,14 @@ class DetailPanel extends StatelessWidget {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
+
                     items: PaletteChartMode.values
                         .map(
                           (mode) => DropdownMenuItem<PaletteChartMode>(
                             value: mode,
                             child: Text(context.tr(_chartModeLabel(mode))),
                           ),
+
                         )
                         .toList(growable: false),
                     onChanged: (value) {
@@ -876,12 +941,14 @@ class DetailPanel extends StatelessWidget {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
+
                     items: PalettePreviewVisionMode.values
                         .map(
                           (mode) => DropdownMenuItem<PalettePreviewVisionMode>(
                             value: mode,
                             child: Text(context.tr(_visionModeLabel(mode))),
                           ),
+
                         )
                         .toList(growable: false),
                     onChanged: (value) {
@@ -905,6 +972,7 @@ class DetailPanel extends StatelessWidget {
                         border: const OutlineInputBorder(),
                         isDense: true,
                       ),
+
                       items: PaletteMarkerShape.values
                           .map(
                             (shape) => DropdownMenuItem<PaletteMarkerShape>(
@@ -912,6 +980,7 @@ class DetailPanel extends StatelessWidget {
                               child:
                                   Text(context.tr(_markerShapeLabel(shape))),
                             ),
+
                           )
                           .toList(growable: false),
                       onChanged: (value) {
@@ -920,6 +989,7 @@ class DetailPanel extends StatelessWidget {
                         }
                       },
                     ),
+
                   ),
                   const SizedBox(width: 12),
                 ],
@@ -1109,6 +1179,7 @@ class CartPreviewPanel extends StatelessWidget {
                           value: kind,
                           child: Text(context.tr(_generationLabel(kind))),
                         ),
+
                       )
                       .toList(growable: false),
                   onChanged: (value) {
@@ -1129,8 +1200,11 @@ class CartPreviewPanel extends StatelessWidget {
                           border: const OutlineInputBorder(),
                           isDense: true,
                         ),
+
                       ),
+
                     ),
+
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextFormField(
@@ -1141,8 +1215,11 @@ class CartPreviewPanel extends StatelessWidget {
                           border: const OutlineInputBorder(),
                           isDense: true,
                         ),
+
                       ),
+
                     ),
+
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -1155,7 +1232,9 @@ class CartPreviewPanel extends StatelessWidget {
                           'count': generationSteps.toString(),
                         },
                       ),
+
                     ),
+
                     Expanded(
                       child: Slider(
                         min: 2,
@@ -1165,7 +1244,9 @@ class CartPreviewPanel extends StatelessWidget {
                         label: '$generationSteps',
                         onChanged: onGenerationStepsChanged,
                       ),
+
                     ),
+
                   ],
                 ),
                 if (generationKind == PaletteGenerationKind.toWhite) ...[
@@ -1177,6 +1258,7 @@ class CartPreviewPanel extends StatelessWidget {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
+
                     items: WhiteTemperature.values
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
@@ -1184,6 +1266,7 @@ class CartPreviewPanel extends StatelessWidget {
                             child:
                                 Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
+
                         )
                         .toList(growable: false),
                     onChanged: (value) {
@@ -1202,7 +1285,9 @@ class CartPreviewPanel extends StatelessWidget {
                         icon: const Icon(Icons.auto_awesome_outlined),
                         label: Text(context.tr('Replace Export Cart')),
                       ),
+
                     ),
+
                     const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton.tonalIcon(
@@ -1210,7 +1295,9 @@ class CartPreviewPanel extends StatelessWidget {
                         icon: const Icon(Icons.add),
                         label: Text(context.tr('Append To Export Cart')),
                       ),
+
                     ),
+
                   ],
                 ),
               ],
@@ -1245,7 +1332,9 @@ class CartPreviewPanel extends StatelessWidget {
                             'count': heatmapSteps.toString(),
                           },
                         ),
+
                       ),
+
                       Expanded(
                         child: Slider(
                           min: 2,
@@ -1255,7 +1344,9 @@ class CartPreviewPanel extends StatelessWidget {
                           label: '$heatmapSteps',
                           onChanged: onHeatmapStepsChanged,
                         ),
+
                       ),
+
                     ],
                   ),
               ],
@@ -1306,12 +1397,15 @@ class CartPreviewPanel extends StatelessWidget {
                             color,
                             onUpdateColor,
                           ),
+
                           trailing: IconButton(
                             tooltip: context.tr('Remove'),
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () => onRemoveColor(color),
                           ),
+
                         ),
+
                       );
                     },
                   ),
@@ -1327,7 +1421,9 @@ class CartPreviewPanel extends StatelessWidget {
                         child: Container(
                           color: _parseHexColor(color.hexCode),
                         ),
+
                       ),
+
                     )
                     .toList(growable: false),
               ),
@@ -1385,7 +1481,9 @@ class CartPreviewPanel extends StatelessWidget {
                       content: Text(
                         context.tr('Invalid HEX format, please input #RRGGBB'),
                       ),
+
                     ),
+
                   );
                   return;
                 }
@@ -1479,6 +1577,7 @@ class PreviewCanvasPanel extends StatelessWidget {
                             boxWidth: rect.width,
                             boxHeight: rect.height,
                           ),
+
                         );
                       },
                       onExtractPixel: (color) {
@@ -1487,6 +1586,7 @@ class PreviewCanvasPanel extends StatelessWidget {
                         Navigator.of(context).pop();
                       },
                     ),
+
                   ),
                 );
               },
@@ -1673,12 +1773,15 @@ class PreviewInspectorPanel extends StatelessWidget {
                             padding: const EdgeInsets.all(8.0),
                             child: Text(context.tr('Color Name'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           ),
+
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(context.tr('HEX Code'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           ),
+
                         ],
                       ),
+
                       for (int i = 0; i < file!.palette.colors.length; i++)
                         () {
                           final color = file!.palette.colors[i];
@@ -1700,9 +1803,13 @@ class PreviewInspectorPanel extends StatelessWidget {
                                       color.name,
                                       style: TextStyle(color: textColor, fontWeight: fw, fontSize: 13),
                                     ),
+
                                   ),
+
                                 ),
+
                               ),
+
                               TableCell(
                                 verticalAlignment: TableCellVerticalAlignment.fill,
                                 child: InkWell(
@@ -1715,9 +1822,13 @@ class PreviewInspectorPanel extends StatelessWidget {
                                         if (selected) Icon(Icons.check_circle, size: 16, color: textColor),
                                       ],
                                     ),
+
                                   ),
+
                                 ),
+
                               ),
+
                             ],
                           );
                         }(),
@@ -1742,12 +1853,14 @@ class PreviewInspectorPanel extends StatelessWidget {
                           border: const OutlineInputBorder(),
                           isDense: true,
                         ),
+
                         items: PaletteChartMode.values
                             .map(
                               (mode) => DropdownMenuItem<PaletteChartMode>(
                                 value: mode,
                                 child: Text(context.tr(_chartModeLabel(mode))),
                               ),
+
                             )
                             .toList(growable: false),
                         onChanged: (value) {
@@ -1756,7 +1869,9 @@ class PreviewInspectorPanel extends StatelessWidget {
                           }
                         },
                       ),
+
                     ),
+
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButtonFormField<PalettePreviewVisionMode>(
@@ -1766,6 +1881,7 @@ class PreviewInspectorPanel extends StatelessWidget {
                           border: const OutlineInputBorder(),
                           isDense: true,
                         ),
+
                         items: PalettePreviewVisionMode.values
                             .map(
                               (mode) =>
@@ -1773,6 +1889,7 @@ class PreviewInspectorPanel extends StatelessWidget {
                                 value: mode,
                                 child: Text(context.tr(_visionModeLabel(mode))),
                               ),
+
                             )
                             .toList(growable: false),
                         onChanged: (value) {
@@ -1781,7 +1898,9 @@ class PreviewInspectorPanel extends StatelessWidget {
                           }
                         },
                       ),
+
                     ),
+
                   ],
                 ),
                 if (usesMarkerShape) ...[
@@ -1793,6 +1912,7 @@ class PreviewInspectorPanel extends StatelessWidget {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
+
                     items: PaletteMarkerShape.values
                         .map(
                           (shape) => DropdownMenuItem<PaletteMarkerShape>(
@@ -1800,6 +1920,7 @@ class PreviewInspectorPanel extends StatelessWidget {
                             child:
                                 Text(context.tr(_markerShapeLabel(shape))),
                           ),
+
                         )
                         .toList(growable: false),
                     onChanged: (value) {
@@ -1919,7 +2040,9 @@ class _FoldCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
+
                         ),
+
                         if (headerAction != null) ...[
                           const SizedBox(width: 8),
                           Expanded(
@@ -1930,11 +2053,15 @@ class _FoldCard extends StatelessWidget {
                                 clipBehavior: Clip.hardEdge,
                                 child: headerAction!,
                               ),
+
                             ),
+
                           ),
+
                         ],
                       ],
                     ),
+
                   ),
                   const SizedBox(width: 6),
                   AnimatedRotation(
@@ -1945,6 +2072,7 @@ class _FoldCard extends StatelessWidget {
                       Icons.expand_more,
                       size: 20,
                     ),
+
                   ),
                 ],
               ),
@@ -2029,6 +2157,7 @@ class PreviewSourcePanel extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+
                           subtitle: Text(
                             context.tr(
                               '{count} colors · {format}',
@@ -2038,11 +2167,14 @@ class PreviewSourcePanel extends StatelessWidget {
                                     file.palette.sourceFormat.toUpperCase(),
                               },
                             ),
+
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
+
                           onTap: () => onFileSelected(file),
                         ),
+
                       );
                     },
                   ),
@@ -2104,6 +2236,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           shape: const CircleBorder(),
                         ),
+
                         child: const Icon(Icons.close_rounded, size: 18),
                       )
                     : OutlinedButton.icon(
@@ -2117,7 +2250,9 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                           softWrap: false,
                           overflow: TextOverflow.fade,
                         ),
+
                       ),
+
               ),
               if (editMode)
                 ConstrainedBox(
@@ -2126,6 +2261,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(134, 40),
                     ),
+
                     onPressed: selectedIndices.isEmpty
                         ? null
                         : onDeleteSelectedPressed,
@@ -2136,6 +2272,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
               if (editMode)
@@ -2145,6 +2282,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(98, 40),
                     ),
+
                     onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
                     child: Text(
                       context.tr('Select All'),
@@ -2152,6 +2290,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
               if (editMode)
@@ -2161,6 +2300,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(98, 40),
                     ),
+
                     onPressed:
                         cartColors.isEmpty ? null : onInvertSelectionPressed,
                     child: Text(
@@ -2169,6 +2309,7 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
             ],
@@ -2211,7 +2352,9 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                             color: computedBorderColor,
                             width: selected ? 2 : 1,
                           ),
+
                         ),
+
                         child: ListTile(
                           dense: true,
                           onTap:
@@ -2224,8 +2367,11 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                               Icons.drag_indicator,
                               color: txColor.withValues(alpha: 0.6),
                             ),
+
                           ),
+
                         ),
+
                       );
                     },
                   ),
@@ -2365,7 +2511,9 @@ class ExportOptionsPanel extends StatelessWidget {
                           child: Text(
                             extension.toUpperCase().replaceFirst('.', ''),
                           ),
+
                         ),
+
                       )
                       .toList(growable: false),
                   onChanged: isBusy ? null : onSelectedExtensionChanged,
@@ -2399,6 +2547,7 @@ class ExportOptionsPanel extends StatelessWidget {
                           value: kind,
                           child: Text(context.tr(_generationLabel(kind))),
                         ),
+
                       )
                       .toList(growable: false),
                   onChanged: (value) {
@@ -2426,6 +2575,7 @@ class ExportOptionsPanel extends StatelessWidget {
                         opacity: animation,
                         child: child,
                       ),
+
                     );
                   },
                   child:
@@ -2441,7 +2591,9 @@ class ExportOptionsPanel extends StatelessWidget {
                                     enabled: uniqueCandidates.isNotEmpty,
                                     onTap: onBaseColorFieldPressed,
                                   ),
+
                                 ),
+
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: _PickHexField(
@@ -2451,7 +2603,9 @@ class ExportOptionsPanel extends StatelessWidget {
                                     enabled: uniqueCandidates.isNotEmpty,
                                     onTap: onSecondaryColorFieldPressed,
                                   ),
+
                                 ),
+
                               ],
                             )
                           : Row(
@@ -2465,9 +2619,12 @@ class ExportOptionsPanel extends StatelessWidget {
                                     enabled: uniqueCandidates.isNotEmpty,
                                     onTap: onBaseColorFieldPressed,
                                   ),
+
                                 ),
+
                               ],
                             ),
+
                 ),
                 if (isBaseColorPicking || isSecondaryColorPicking) ...[
                   const SizedBox(height: 6),
@@ -2481,7 +2638,9 @@ class ExportOptionsPanel extends StatelessWidget {
                           : context.tr(
                               'Secondary color pick mode: tap a color in the right export list to apply',
                             ),
+
                     ),
+
                   ),
                 ],
                 const SizedBox(height: 8),
@@ -2494,7 +2653,9 @@ class ExportOptionsPanel extends StatelessWidget {
                           'count': generationSteps.toString(),
                         },
                       ),
+
                     ),
+
                     Expanded(
                       child: Slider(
                         min: 2,
@@ -2504,7 +2665,9 @@ class ExportOptionsPanel extends StatelessWidget {
                         label: '$generationSteps',
                         onChanged: onGenerationStepsChanged,
                       ),
+
                     ),
+
                   ],
                 ),
                 if (generationKind == PaletteGenerationKind.toWhite) ...[
@@ -2516,6 +2679,7 @@ class ExportOptionsPanel extends StatelessWidget {
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
+
                     items: WhiteTemperature.values
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
@@ -2523,6 +2687,7 @@ class ExportOptionsPanel extends StatelessWidget {
                             child:
                                 Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
+
                         )
                         .toList(growable: false),
                     onChanged: (value) {
@@ -2553,7 +2718,9 @@ class ExportOptionsPanel extends StatelessWidget {
                         icon: const Icon(Icons.auto_awesome_outlined),
                         label: Text(context.tr('Replace Export Cart')),
                       ),
+
                     ),
+
                     const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton.tonalIcon(
@@ -2563,7 +2730,9 @@ class ExportOptionsPanel extends StatelessWidget {
                         icon: const Icon(Icons.add),
                         label: Text(context.tr('Append To Export Cart')),
                       ),
+
                     ),
+
                   ],
                 ),
               ],
@@ -2600,7 +2769,9 @@ class ExportOptionsPanel extends StatelessWidget {
                             'count': heatmapSteps.toString(),
                           },
                         ),
+
                       ),
+
                       Expanded(
                         child: Slider(
                           min: 2,
@@ -2610,7 +2781,9 @@ class ExportOptionsPanel extends StatelessWidget {
                           label: '$heatmapSteps',
                           onChanged: onHeatmapStepsChanged,
                         ),
+
                       ),
+
                     ],
                   ),
               ],
@@ -2689,12 +2862,14 @@ class _PickHexField extends StatelessWidget {
                       label,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
+
                     Text(
                       normalized,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+
                   ],
                 ),
               ),
@@ -2857,6 +3032,7 @@ class ExportColorListPanel extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           shape: const CircleBorder(),
                         ),
+
                         child: const Icon(Icons.close_rounded, size: 18),
                       )
                     : OutlinedButton.icon(
@@ -2868,7 +3044,9 @@ class ExportColorListPanel extends StatelessWidget {
                           softWrap: false,
                           overflow: TextOverflow.fade,
                         ),
+
                       ),
+
               ),
               if (editMode)
                 ConstrainedBox(
@@ -2877,6 +3055,7 @@ class ExportColorListPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(134, 40),
                     ),
+
                     onPressed: selectedIndices.isEmpty
                         ? null
                         : onDeleteSelectedPressed,
@@ -2887,6 +3066,7 @@ class ExportColorListPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
               if (editMode)
@@ -2896,6 +3076,7 @@ class ExportColorListPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(98, 40),
                     ),
+
                     onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
                     child: Text(
                       context.tr('Select All'),
@@ -2903,6 +3084,7 @@ class ExportColorListPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
               if (editMode)
@@ -2912,6 +3094,7 @@ class ExportColorListPanel extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(98, 40),
                     ),
+
                     onPressed:
                         cartColors.isEmpty ? null : onInvertSelectionPressed,
                     child: Text(
@@ -2920,6 +3103,7 @@ class ExportColorListPanel extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                   ),
                 ),
               FilledButton.tonalIcon(
@@ -2962,6 +3146,7 @@ class ExportColorListPanel extends StatelessWidget {
                       : context.tr(
                           'Secondary color picking: tap any color below to set as secondary',
                         ),
+
                 ),
               ),
             ),
@@ -3015,7 +3200,9 @@ class ExportColorListPanel extends StatelessWidget {
                                           color: borderColor,
                                           width: selected ? 2 : 1,
                                         ),
+
                                       ),
+
                                       child: ListTile(
                                         selected: selected,
                                         leading:
@@ -3042,6 +3229,7 @@ class ExportColorListPanel extends StatelessWidget {
                                                   color,
                                                   onUpdateColor,
                                                 ),
+
                                         trailing: ReorderableDragStartListener(
                                           index: index,
                                           child: Icon(
@@ -3050,12 +3238,17 @@ class ExportColorListPanel extends StatelessWidget {
                                                 .colorScheme
                                                 .onSurfaceVariant,
                                           ),
+
                                         ),
+
                                       ),
+
                                     );
                                   },
                                 ),
+
                               ),
+
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 20,
@@ -3067,13 +3260,18 @@ class ExportColorListPanel extends StatelessWidget {
                                             color:
                                                 _parseHexColor(color.hexCode),
                                           ),
+
                                         ),
+
                                       )
                                       .toList(growable: false),
                                 ),
+
                               ),
+
                             ],
                           ),
+
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3089,6 +3287,7 @@ class ExportColorListPanel extends StatelessWidget {
                       content: previewContent,
                       errorMessage: previewError,
                     ),
+
                   ),
                 ),
               ],
@@ -3221,6 +3420,7 @@ class _ExportFilePreview extends StatelessWidget {
                       color: darkScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
+
                   ),
                 ),
                 Container(
@@ -3239,6 +3439,7 @@ class _ExportFilePreview extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
+
                   ),
                 ),
               ],
@@ -3440,6 +3641,7 @@ Future<void> _showColorEditDialog(
                     content: Text(
                       context.tr('Invalid HEX format, please input #RRGGBB'),
                     ),
+
                   ),
                 );
                 return;
@@ -3577,6 +3779,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
                       eyeDropperX: nx,
                       eyeDropperY: ny,
                     ),
+
                   );
                 }
               : null,
@@ -3603,6 +3806,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
                       widget.imageBytes,
                       fit: BoxFit.contain,
                     ),
+
                   ),
                 ),
                 if (profile.mode == ExtractionMode.boxRange)
@@ -3614,6 +3818,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
                       onPanEnd: (details) => _handleBoxPanEnd(width, height),
                       onPanCancel: () => _handleBoxPanEnd(width, height),
                     ),
+
                   ),
                 if (profile.mode == ExtractionMode.boxRange)
                   Positioned.fromRect(
@@ -3624,7 +3829,9 @@ class _PreviewBoxState extends State<_PreviewBox> {
                         color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
+
                     ),
+
                   ),
                 if (profile.mode == ExtractionMode.boxRange && dragRect != null)
                   Positioned.fromRect(
@@ -3636,7 +3843,9 @@ class _PreviewBoxState extends State<_PreviewBox> {
                         color: const Color(0xFF2563EB).withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(6),
                       ),
+
                     ),
+
                   ),
                 if (profile.mode == ExtractionMode.eyeDropper)
                   Positioned(
@@ -3651,6 +3860,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
                       size: 22,
                       color: Colors.white,
                     ),
+
                   ),
               ],
             ),
@@ -3737,6 +3947,7 @@ class _ExtractionControls extends StatelessWidget {
                     : () => onProfileChanged(
                           profile.copyWith(pageIndex: profile.pageIndex - 1),
                         ),
+
                 icon: const Icon(Icons.remove_circle_outline),
               ),
               Text('${profile.pageIndex}'),
@@ -3930,42 +4141,60 @@ class _PaletteChartPreview extends StatelessWidget {
     }
 
     if (mode == PaletteChartMode.table) {
+      final dummyData = [
+        ['001', 'Primary Action', 'Active', '1,200.00'],
+        ['002', 'Secondary Sidebar', 'Idle', '850.50'],
+        ['003', 'Header Background', 'Pinned', '200.00'],
+        ['004', 'System Feedback', 'Error', '0.00'],
+        ['005', 'Success Indicator', 'Done', '1,500.00'],
+        ['006', 'Neutral Contrast', 'Hidden', '45.00'],
+      ];
+
       return DecoratedBox(
         decoration: BoxDecoration(
-          border:
-              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: ListView.separated(
-          itemCount: colors.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final color = colors[index];
-            final selected = isSelected(color);
-            final visual = _previewColor(color.hexCode, visionMode);
-            return ListTile(
-              dense: true,
-              leading: Container(
-                height: 14,
-                width: 14,
-                decoration: BoxDecoration(
-                  color: visual,
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: Colors.black.withValues(alpha: 0.2)),
-                ),
+        child: SingleChildScrollView(
+          child: Table(
+            border: TableBorder.all(color: Theme.of(context).colorScheme.outlineVariant, width: 0.5),
+            children: [
+              TableRow(
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                children: [
+                   for (var head in ['ID', 'Component', 'Status', 'Val'])
+                     Padding(
+                       padding: const EdgeInsets.all(8.0),
+                       child: Text(head, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                     ),
+
+                ],
               ),
-              title: Text(
-                color.name,
-                style: TextStyle(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              for (int i = 0; i < dummyData.length; i++)
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: _previewColor(colors[i % colors.length].hexCode, visionMode).withOpacity(0.85),
+                  ),
+                  children: [
+                    for (var cell in dummyData[i])
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          cell,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _luminanceOfHex(colors[i % colors.length].hexCode) > 0.6 ? Colors.black : Colors.white,
+                          ),
+
+                        ),
+
+                      ),
+
+                  ],
                 ),
-              ),
-              subtitle: Text(color.hexCode),
-              trailing: Text(
-                  'L ${_luminanceOfHex(color.hexCode).toStringAsFixed(2)}'),
-            );
-          },
+            ],
+          ),
         ),
       );
     }
@@ -4494,6 +4723,7 @@ class _PanelFrame extends StatelessWidget {
                           context.tr(subtitle),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
+
                       ],
                     ],
                   ),
@@ -4554,6 +4784,7 @@ class _ColorCard extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                     ),
+
                   ),
                   Text(
                     color.hexCode,
@@ -4972,57 +5203,63 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
     if (_state != _FullscreenViewState.idle) {
       content = LayoutBuilder(
         builder: (context, constraints) {
+          final isPicker = _state == _FullscreenViewState.colorPicker;
           return GestureDetector(
             onPanStart: _state == _FullscreenViewState.boxRange ? _handleBoxStart : (d) => _handlePointerPan(DragUpdateDetails(globalPosition: d.globalPosition, localPosition: d.localPosition), constraints),
             onPanUpdate: _state == _FullscreenViewState.boxRange ? _handleBoxUpdate : (d) => _handlePointerPan(d, constraints),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.memory(
-                  Uint8List.fromList(widget.file.sourceBytes!),
-                  fit: BoxFit.fill,
-                ),
-                if (_state == _FullscreenViewState.boxRange && _dragStart != null && _dragCurrent != null)
-                  Positioned.fromRect(
-                    rect: Rect.fromPoints(_dragStart!, _dragCurrent!),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        color: Colors.white.withOpacity(0.2),
-                      ),
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: _decodedImage != null ? _decodedImage!.width / _decodedImage!.height : 4 / 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.memory(
+                      Uint8List.fromList(widget.file.sourceBytes!),
+                      fit: BoxFit.fill,
                     ),
-                  ),
-                if (_state == _FullscreenViewState.colorPicker && _pointerPos != null && _pointerColor != null)
-                  Positioned(
-                    left: _pointerPos!.dx,
-                    top: _pointerPos!.dy,
-                    child: FractionalTranslation(
-                      translation: const Offset(0.2, -1.2),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black87,
-                          border: Border.all(color: Colors.white54),
-                          borderRadius: BorderRadius.circular(8),
+                    if (_state == _FullscreenViewState.boxRange && _dragStart != null && _dragCurrent != null)
+                      Positioned.fromRect(
+                        rect: Rect.fromPoints(_dragStart!, _dragCurrent!),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(width: 24, height: 24, color: _pointerColor),
-                            const SizedBox(width: 8),
-                            Text(
-                              '#',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    if (isPicker && _pointerPos != null && _pointerColor != null)
+                      Positioned(
+                        left: _pointerPos!.dx,
+                        top: _pointerPos!.dy,
+                        child: FractionalTranslation(
+                          translation: const Offset(0.2, -1.2),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              border: Border.all(color: Colors.white54),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(width: 24, height: 24, color: _pointerColor),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '#${_pointerColor!.value.toRadixString(16).padLeft(8, "0").substring(2).toUpperCase()}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           );
-        }
+        },
       );
     } else {
       content = InteractiveViewer(
@@ -5037,12 +5274,12 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
         children: [
           Center(child: content),
           Positioned(
-            top: 0,
-            right: 0,
+            top: 10,
+            right: 10,
             child: _buildTopButtons(),
           ),
         ],
-      )
+      ),
     );
   }
 }
