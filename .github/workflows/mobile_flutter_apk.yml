@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-packages:
-    runs-on: macos-26
+  build-android:
+    runs-on: windows-latest
 
     defaults:
       run:
@@ -30,10 +30,57 @@ jobs:
       - name: Show toolchain version
         run: flutter --version
 
-      - name: Create Android and iOS host projects if missing
+      - name: Create Android host project if missing
+        shell: bash
         run: |
-          if [ ! -d "android" ] || [ ! -d "ios" ]; then
-            flutter create --platforms=android,ios --no-pub .
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android --no-pub .
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Apply mobile app icons
+        run: flutter pub run flutter_launcher_icons -f flutter_launcher_icons_mobile.yaml
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: color-manager-release-apk
+          path: mobile_flutter/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build-ios:
+    runs-on: macos-26
+
+    defaults:
+      run:
+        working-directory: mobile_flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show toolchain version
+        run: flutter --version
+
+      - name: Create iOS host project if missing
+        shell: bash
+        run: |
+          if [ ! -d "ios" ]; then
+            flutter create --platforms=ios --no-pub .
           fi
 
       - name: Inject iOS camera usage description
@@ -58,16 +105,11 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build release APK
-        run: flutter build apk --release
-
-      - name: Build release AAB
-        run: flutter build appbundle --release
-
       - name: Build unsigned iOS app
         run: flutter build ios --release --no-codesign
 
       - name: Package unsigned iOS IPA
+        shell: bash
         run: |
           APP_PATH=$(find build/ios/iphoneos -maxdepth 1 -name "*.app" -print -quit)
           if [ -z "$APP_PATH" ]; then
@@ -79,22 +121,8 @@ jobs:
           cp -R "$APP_PATH" build/ios/unsigned/Payload/
           (
             cd build/ios/unsigned
-            /usr/bin/zip -qry ../unsigned-iphoneos.ipa Payload
+            zip -qry ../unsigned-iphoneos.ipa Payload
           )
-
-      - name: Upload release APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: color-manager-release-apk
-          path: mobile_flutter/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-
-      - name: Upload release AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: color-manager-release-aab
-          path: mobile_flutter/build/app/outputs/bundle/release/app-release.aab
-          if-no-files-found: error
 
       - name: Upload unsigned iOS IPA artifact
         uses: actions/upload-artifact@v4
