@@ -1751,9 +1751,6 @@ class _MainShellState extends State<MainShell> {
         if (constraints.maxWidth >= LayoutContract.mediumBreakpoint) {
           final expandedDesktop =
               constraints.maxWidth >= LayoutContract.expandedBreakpoint;
-          final leftOpenWidth = expandedDesktop ? 320.0 : 280.0;
-          final rightOpenWidth = expandedDesktop ? 320.0 : 280.0;
-          const collapsedWidth = 52.0;
 
           final centerPanel = expandedDesktop
               ? Row(
@@ -1771,42 +1768,26 @@ class _MainShellState extends State<MainShell> {
                   ],
                 );
 
+          final leftFlex = expandedDesktop
+              ? LayoutContract.expandedLeftFlex
+              : LayoutContract.mediumLeftFlex;
+          final centerFlex = expandedDesktop
+              ? LayoutContract.expandedCenterFlex
+              : LayoutContract.mediumCenterFlex;
+          final rightFlex = expandedDesktop
+              ? LayoutContract.expandedRightFlex
+              : LayoutContract.mediumRightFlex;
+
           return Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                  width: _previewSourceDrawerExpanded
-                      ? leftOpenWidth
-                      : collapsedWidth,
-                  child: _PreviewSideDrawer(
-                    expanded: _previewSourceDrawerExpanded,
-                    isLeft: true,
-                    arrowIcon: Icons.arrow_forward,
-                    onToggle: _togglePreviewSourceDrawer,
-                    child: sourcePanel,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(child: centerPanel),
-                const SizedBox(width: 10),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                  width: _previewCartDrawerExpanded
-                      ? rightOpenWidth
-                      : collapsedWidth,
-                  child: _PreviewSideDrawer(
-                    expanded: _previewCartDrawerExpanded,
-                    isLeft: false,
-                    arrowIcon: Icons.arrow_back,
-                    onToggle: _togglePreviewCartDrawer,
-                    child: cartSummaryPanel,
-                  ),
-                ),
+                Expanded(flex: leftFlex, child: sourcePanel),
+                const SizedBox(width: 12),
+                Expanded(flex: centerFlex, child: centerPanel),
+                const SizedBox(width: 12),
+                Expanded(flex: rightFlex, child: cartSummaryPanel),
               ],
             ),
           );

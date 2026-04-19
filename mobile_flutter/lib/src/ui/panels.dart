@@ -1563,12 +1563,15 @@ class PreviewCartSummaryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                width: editMode ? 42 : 138,
+                width: editMode ? 42 : 164,
                 height: 40,
                 child: editMode
                     ? OutlinedButton(
@@ -1584,36 +1587,66 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                             ? null
                             : () => onEditModeChanged(true),
                         icon: const Icon(Icons.edit_outlined),
-                        label: Text(context.tr('Edit Export Cart')),
+                        label: Text(
+                          context.tr('Edit Export Cart'),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.fade,
+                        ),
                       ),
               ),
-              if (editMode) ...[
-                const SizedBox(width: 8),
-                Expanded(
+              if (editMode)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 134),
                   child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(134, 40),
+                    ),
                     onPressed: selectedIndices.isEmpty
                         ? null
                         : onDeleteSelectedPressed,
                     icon: const Icon(Icons.delete_outline),
-                    label: Text(context.tr('Delete Selected')),
+                    label: Text(
+                      context.tr('Delete Selected'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+              if (editMode)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 98),
                   child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(98, 40),
+                    ),
                     onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
-                    child: Text(context.tr('Select All')),
+                    child: Text(
+                      context.tr('Select All'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+              if (editMode)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 98),
                   child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(98, 40),
+                    ),
                     onPressed:
                         cartColors.isEmpty ? null : onInvertSelectionPressed,
-                    child: Text(context.tr('Invert Selection')),
+                    child: Text(
+                      context.tr('Invert Selection'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ],
             ],
           ),
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
@@ -2213,11 +2246,12 @@ class ExportColorListPanel extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                width: editMode ? 42 : 138,
+                width: editMode ? 42 : 164,
                 height: 40,
                 child: editMode
                     ? OutlinedButton(
@@ -2231,26 +2265,65 @@ class ExportColorListPanel extends StatelessWidget {
                     : OutlinedButton.icon(
                         onPressed: cartColors.isEmpty ? null : onEditModeToggle,
                         icon: const Icon(Icons.edit_outlined),
-                        label: Text(context.tr('Edit Export Cart')),
+                        label: Text(
+                          context.tr('Edit Export Cart'),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.fade,
+                        ),
                       ),
               ),
               if (editMode)
-                OutlinedButton.icon(
-                  onPressed:
-                      selectedIndices.isEmpty ? null : onDeleteSelectedPressed,
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(context.tr('Delete Selected')),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 134),
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(134, 40),
+                    ),
+                    onPressed: selectedIndices.isEmpty
+                        ? null
+                        : onDeleteSelectedPressed,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(
+                      context.tr('Delete Selected'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               if (editMode)
-                OutlinedButton(
-                  onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
-                  child: Text(context.tr('Select All')),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 98),
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(98, 40),
+                    ),
+                    onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
+                    child: Text(
+                      context.tr('Select All'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               if (editMode)
-                OutlinedButton(
-                  onPressed:
-                      cartColors.isEmpty ? null : onInvertSelectionPressed,
-                  child: Text(context.tr('Invert Selection')),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 98),
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(98, 40),
+                    ),
+                    onPressed:
+                        cartColors.isEmpty ? null : onInvertSelectionPressed,
+                    child: Text(
+                      context.tr('Invert Selection'),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               FilledButton.tonalIcon(
                 onPressed: isBusy ? null : () => onAddManualColorPressed(),
@@ -3840,9 +3913,12 @@ class _PanelFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final panelColor = Theme.of(context).brightness == Brightness.dark
+        ? colorScheme.surfaceContainerHigh
+        : colorScheme.surfaceContainerLow;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: panelColor,
         border: Border.all(color: colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(14),
       ),
