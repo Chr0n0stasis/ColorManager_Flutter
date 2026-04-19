@@ -850,6 +850,27 @@ class _MainShellState extends State<MainShell> {
     _applyAutoThemeSeedFromContext();
   }
 
+
+  void _addColorToSamplingResults(ColorEntry color) {
+    final current = _selectedFile;
+    if (current == null) return;
+    final updatedColors = [...current.palette.colors, color];
+    final updatedPalette = Palette(
+      name: current.palette.name,
+      colors: updatedColors,
+      sourcePath: current.palette.sourcePath,
+      sourceFormat: current.palette.sourceFormat,
+      sourceGroup: current.palette.sourceGroup,
+    );
+    _replaceRecord(current.copyWith(palette: updatedPalette));
+    setState(() {
+      _setStatus(_tr(
+        'Added {hexCode} to sampling results.',
+        params: <String, String>{'hexCode': color.hexCode},
+      ));
+    });
+  }
+
   void _removeExportColor(ColorEntry color) {
     final key = _colorKey(color);
     setState(() {
@@ -1207,7 +1228,6 @@ class _MainShellState extends State<MainShell> {
       _replaceRecord(updated);
 
       setState(() {
-        _syncExportPaletteFromColors(updated.palette.colors);
         _selectedExportColorIndex = null;
         _isBusy = false;
         _setStatus(_tr(
@@ -2029,7 +2049,7 @@ class _MainShellState extends State<MainShell> {
       onProfileChanged: _updateExtractionProfile,
       onAddColor: (color) {
         if (_selectedFile != null) {
-           _toggleExportColor(color);
+           _addColorToSamplingResults(color);
         }
       },
     );
@@ -2123,58 +2143,76 @@ class _MainShellState extends State<MainShell> {
         final wSide = screenWidth * 2 / 9;
         final wMain = screenWidth * 7 / 18;
 
+        void onHeaderDrag(DragUpdateDetails d) {
+          _previewScrollController.jumpTo(
+            (_previewScrollController.offset - d.delta.dx)
+                .clamp(0.0, wSide),
+          );
+        }
+
+        void onHeaderDragEnd(DragEndDetails d) {
+          final offset = _previewScrollController.offset;
+          final threshold = wSide / 2;
+          final velocity = d.velocity.pixelsPerSecond.dx;
+          double target;
+          if (velocity < -300) {
+            target = wSide;
+          } else if (velocity > 300) {
+            target = 0;
+          } else {
+            target = offset > threshold ? wSide : 0;
+          }
+          _previewScrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+
+        Widget wrapWithHeaderDrag(Widget panel) {
+          return HeaderDragWrapper(
+            onDragUpdate: onHeaderDrag,
+            onDragEnd: onHeaderDragEnd,
+            child: panel,
+          );
+        }
+
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollEndNotification) {
-                final offset = _previewScrollController.offset;
-                final threshold = wSide / 2;
-                if (offset > 0 && offset < wSide) {
-                  if (offset < threshold) {
-                    _previewScrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                  } else {
-                    _previewScrollController.animateTo(wSide, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                  }
-                }
-              }
-              return false;
-            },
-            child: ListView(
-              controller: _previewScrollController,
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              children: [
-                SizedBox(
-                  width: wSide,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: sourcePanel,
-                  ),
+          child: ListView(
+            controller: _previewScrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              SizedBox(
+                width: wSide,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: wrapWithHeaderDrag(sourcePanel),
                 ),
-                SizedBox(
-                  width: wMain,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: canvasPanel,
-                  ),
+              ),
+              SizedBox(
+                width: wMain,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: wrapWithHeaderDrag(canvasPanel),
                 ),
-                SizedBox(
-                  width: wMain,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: inspectorPanel,
-                  ),
+              ),
+              SizedBox(
+                width: wMain,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: wrapWithHeaderDrag(inspectorPanel),
                 ),
-                SizedBox(
-                  width: wSide,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: cartSummaryPanel,
-                  ),
+              ),
+              SizedBox(
+                width: wSide,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: wrapWithHeaderDrag(cartSummaryPanel),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },

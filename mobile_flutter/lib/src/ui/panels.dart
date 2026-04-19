@@ -4184,7 +4184,7 @@ class _PaletteChartPreview extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: _luminanceOfHex(colors[i % colors.length].hexCode) > 0.6 ? Colors.black : Colors.white,
+                            color: _luminanceOfHex(colors[i % colors.length].hexCode) > 0.45 ? Colors.black : Colors.white,
                           ),
 
                         ),
@@ -5008,9 +5008,9 @@ Color _previewColor(String hexCode, PalettePreviewVisionMode mode) {
 
 double _luminanceOfHex(String hexCode) {
   final c = _parseHexColor(hexCode);
-  return (0.2126 * (c.r / 255.0)) +
-      (0.7152 * (c.g / 255.0)) +
-      (0.0722 * (c.b / 255.0));
+  return (0.2126 * c.red / 255.0) +
+      (0.7152 * c.green / 255.0) +
+      (0.0722 * c.blue / 255.0);
 }
 
 Color _parseHexColor(String hexCode) {
@@ -5050,9 +5050,12 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
   Offset? _dragStart;
   Offset? _dragCurrent;
 
+  late final Uint8List _cachedBytes;
+
   @override
   void initState() {
     super.initState();
+    _cachedBytes = _cachedBytes;
     _decodeImageAsync();
   }
   
@@ -5142,6 +5145,7 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
               final right = (rect.right / w).clamp(0.0, 1.0);
               final bottom = (rect.bottom / h).clamp(0.0, 1.0);
               widget.onExtractFromBox(Rect.fromLTRB(left, top, right, bottom));
+              Navigator.of(context).pop();
             }
           },
           child: const Icon(Icons.check),
@@ -5196,7 +5200,7 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
   @override
   Widget build(BuildContext context) {
     Widget content = Image.memory(
-      Uint8List.fromList(widget.file.sourceBytes!),
+      _cachedBytes,
       fit: BoxFit.contain,
     );
 
@@ -5214,7 +5218,7 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
                   fit: StackFit.expand,
                   children: [
                     Image.memory(
-                      Uint8List.fromList(widget.file.sourceBytes!),
+                      _cachedBytes,
                       fit: BoxFit.fill,
                     ),
                     if (_state == _FullscreenViewState.boxRange && _dragStart != null && _dragCurrent != null)
@@ -5280,6 +5284,40 @@ class _FullscreenPreviewDialogState extends State<_FullscreenPreviewDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+class HeaderDragWrapper extends StatelessWidget {
+  const HeaderDragWrapper({
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.child,
+  });
+
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        // Transparent overlay on the header area only (~56px top)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 56,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: onDragUpdate,
+            onHorizontalDragEnd: onDragEnd,
+          ),
+        ),
+      ],
     );
   }
 }
