@@ -166,7 +166,13 @@ jobs:
 
       - name: Apply Linux app icon
         if: matrix.platform == 'linux'
-        run: cp assets/icons/app_icon.png linux/runner/resources/app_icon.png
+        run: |
+          if [ ! -f "assets/icons/app_icon.png" ]; then
+            echo "Missing icon source: assets/icons/app_icon.png"
+            exit 1
+          fi
+          mkdir -p linux/runner/resources
+          cp assets/icons/app_icon.png linux/runner/resources/app_icon.png
 
       - name: Build desktop package
         run: flutter build ${{ matrix.platform }} --release
