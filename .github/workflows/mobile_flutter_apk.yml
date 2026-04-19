@@ -2,14 +2,6 @@ name: Mobile Flutter Packages
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - mobile_flutter/**
-      - .github/workflows/mobile_flutter_apk.yml
-  pull_request:
-    paths:
-      - mobile_flutter/**
-      - .github/workflows/mobile_flutter_apk.yml
 
 jobs:
   build-packages:
