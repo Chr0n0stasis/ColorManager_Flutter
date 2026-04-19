@@ -779,7 +779,7 @@ class PaletteImportService {
     
     for (int i = 0; i < palette.colors.length; i++) {
         final color = _parseHexColor(palette.colors[i].hexCode);
-        final paintColor = img.ColorRgba8(color.r, color.g, color.b, 255);
+        final paintColor = img.ColorRgba8(color.r.toInt(), color.g.toInt(), color.b.toInt(), 255);
         img.fillRect(
             image, 
             x1: i * itemWidth, 
