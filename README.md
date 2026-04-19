@@ -1,35 +1,46 @@
-﻿# ColorManager / 色卡管理器
+# ColorManager / 色卡管理器
 
-ColorManager is a local desktop tool for collecting, previewing, organizing, and exporting scientific color palettes.
+ColorManager is a local toolset for collecting, previewing, organizing, generating, and exporting scientific color palettes.
 
-色卡管理器是一个面向科研绘图场景的本地桌面工具，用来整理、预览、拼配、检查和导出色卡。
+色卡管理器是一个面向科研绘图场景的本地工具集，用于整理、预览、生成、检查和导出色卡。
 
 ## Overview / 项目定位
 
-This project is built around a practical workflow for scientific plotting:
+This repository contains two implementation tracks for the same palette workflow:
 
-本项目围绕科研绘图中的实际配色流程而设计：
+本仓库包含同一配色工作流的两条实现线：
 
-- browse palette assets visually instead of only reading file names
-- collect colors from `ASE`, gradients, images, and PDF figures
-- build a working palette in a cart-like area
-- preview how colors behave in common scientific plots
-- export palettes for OriginLab, R, Python, and MATLAB
+- Desktop source implementation (`Python + PySide6`) under `app/`
+- Cross-platform client implementation (`Flutter`) under `mobile_flutter/`
 
-- 不只是按文件名找色卡，而是直接可视化浏览素材
-- 从 `ASE`、渐变、图片、PDF 图页中提取颜色
-- 在右侧拼配区整理自己的工作色卡
-- 提前检查颜色在常见科研图中的表现
-- 导出给 OriginLab、R、Python、MATLAB 等工具使用
+- 桌面原始实现（`Python + PySide6`），位于 `app/`
+- 跨平台客户端实现（`Flutter`），位于 `mobile_flutter/`
+
+The shared goal is practical scientific plotting support:
+
+共同目标是服务科研绘图中的实际配色流程：
+
+- manage palette assets visually, not by filename only
+- extract colors from palette files, images, and PDF pages
+- organize a working palette in a cart-like area
+- preview palette behavior in common chart styles
+- export to reusable scientific workflows
+
+- 以可视化方式管理配色素材，而不只依赖文件名
+- 从色卡文件、图片、PDF 页面提取颜色
+- 在导出区拼配和整理工作色卡
+- 在常见图表样式中预览配色表现
+- 导出到可复用的科研工作流
 
 ## Highlights / 功能速览
 
 | Area | What it supports |
 | --- | --- |
 | Palette sources | `ASE`, `CSV`, `JSON`, `GPL`, `PAL`, images, `PDF` |
-| Browsing | folder tree, filters, favorites, tags |
-| Extraction | image click/region picking, PDF page and region extraction |
-| Editing | cart sorting, multi-select, palette generation |
+| Browsing | search, filtering, favorites, structured list |
+| Extraction | image sampling, region pick, PDF page extraction |
+| Editing | cart management, sorting, manual edit, generated colors |
+| Generation | `Two-Color Gradient`, `Heatmap`, `Analogous`, `Complementary`, `To White` |
 | Preview | `Line`, `Bar`, `Scatter`, `Clustered`, `Circular`, `Map` |
 | Accessibility check | `Normal`, `Colorblind`, `Grayscale` |
 | Export | `ASE`, `CSV`, `JSON`, `PAL`, `R`, `Python`, `MATLAB` snippets |
@@ -37,59 +48,35 @@ This project is built around a practical workflow for scientific plotting:
 | 模块 | 支持内容 |
 | --- | --- |
 | 色卡来源 | `ASE`、`CSV`、`JSON`、`GPL`、`PAL`、图片、`PDF` |
-| 浏览方式 | 文件夹树、筛选、收藏、标签 |
-| 取色方式 | 图片点击/框选、PDF 页面与区域提取 |
-| 编辑能力 | 拼配区排序、多选、配色生成 |
-| 预览类型 | `Line`、`Bar`、`Scatter`、`Clustered`、`Circular`、`Map` |
-| 检查模式 | `Normal`、`Colorblind`、`Grayscale` |
-| 导出方式 | `ASE`、`CSV`、`JSON`、`PAL`、`R`、`Python`、`MATLAB` 代码片段 |
+| 浏览能力 | 搜索、筛选、收藏、结构化列表 |
+| 取色方式 | 图片采样、区域框选、PDF 页面提取 |
+| 编辑能力 | 导出区管理、排序、手动编辑、生成颜色 |
+| 生成模式 | `双色渐变`、`热图配色`、`邻近色`、`互补色`、`向白过渡` |
+| 预览图形 | `Line`、`Bar`、`Scatter`、`Clustered`、`Circular`、`Map` |
+| 可读性检查 | `Normal`、`Colorblind`、`Grayscale` |
+| 导出能力 | `ASE`、`CSV`、`JSON`、`PAL`、`R`、`Python`、`MATLAB` 代码片段 |
 
 ## Main Features / 主要功能
 
-- Import palette files, gradients, images, and PDF sources
-- Browse `materials` and `library` with folder tree, filters, favorites, and tags
-- Preview palette colors, gradients, source images, and PDF pages
-- Extract colors from images and PDF pages by click or region selection
-- Build palettes in the cart with drag sorting and multi-select editing
-- Generate related colors with `Similar`, `Complement`, `Blend Mid`, `Diverging`, and `Tint Ramp`
-- Use quick plot preview for daily checks and `Advanced Preview` for more complex plot styles
-- Export palettes to common scientific workflows and reusable code snippets
+- Import and parse multiple palette formats with compatibility-first behavior
+- Extract colors from image and PDF sources for real-world figure workflows
+- Build and edit export-ready color collections with list operations
+- Generate palette variants from selected base colors
+- Preview color effects before export in chart-oriented scenes
+- Export standard palette files and code snippets for downstream tools
 
-- 支持导入色卡文件、渐变、图片和 PDF 素材
-- 支持以文件夹树、筛选、收藏、标签方式浏览 `materials` 和 `library`
-- 支持预览色卡颜色、渐变条、原图和 PDF 页面
-- 支持从图片和 PDF 页面中通过点击或框选提取颜色
-- 支持在右侧拼配区拖拽排序、多选编辑、整理工作色卡
-- 支持 `Similar`、`Complement`、`Blend Mid`、`Diverging`、`Tint Ramp` 等配色辅助
-- 支持日常快速预览和独立的 `Advanced Preview` 高级示意图
-- 支持导出到常见科研工作流以及可复用代码片段
+- 兼容优先地导入和解析多种色卡格式
+- 针对真实图件流程，从图片与 PDF 素材中提取颜色
+- 通过导出区列表操作整理可输出的颜色集合
+- 基于基色生成多种配色变体
+- 在图表导向场景中提前检查颜色效果
+- 导出标准色卡文件与下游工具可用代码片段
 
-## Map Note / 地图说明
-
-The China map used in preview is a simplified display asset. For presentation purposes, the original source data has been adjusted and the nine-dash line is not shown in the current preview.
-
-预览中使用的中国地图为简化展示素材。出于界面展示需要，当前预览未显示原始数据中的九段线。
-## Interaction Notes / 交互细节提示
-
-A few palette-generation actions behave differently depending on selection:
-
-有几类配色生成动作会根据当前是否选中颜色，采用不同逻辑：
-
-- If colors are selected in the cart, `Blend Mid` and `Diverging` insert new colors between the selected colors.
-- If nothing is selected, generated colors are appended to the end of the cart.
-- `Advanced Preview` uses the cart order directly.
-- `PDF Extractor` keeps a temporary preview palette first; you can then add that preview to the main cart or save it into `materials`.
-
-- 如果右侧拼配区有选中的颜色，`Blend Mid` 和 `Diverging` 会把新颜色插入到这些已选颜色之间。
-- 如果右侧没有选中颜色，生成结果会直接追加到拼配区末尾。
-- `Advanced Preview` 会直接使用右侧拼配区当前顺序。
-- `PDF Extractor` 会先生成临时预览色卡，再由你决定加入主拼配区或保存到 `materials`。
-
-## Project Structure / 项目结构
+## Repository Structure / 仓库结构
 
 ```text
-Color/
-├─ app/
+ColorManager/
+├─ app/                           # Python desktop source implementation
 │  ├─ assets/
 │  ├─ main.py
 │  ├─ config.py
@@ -99,112 +86,118 @@ Color/
 │  └─ ui/
 │     ├─ main_window.py
 │     └─ pdf_dialog.py
-├─ mobile_flutter/
+├─ mobile_flutter/                # Flutter cross-platform client implementation
 │  ├─ lib/
+│  ├─ assets/
 │  ├─ test/
 │  └─ pubspec.yaml
-├─ icon.ico
-├─ build_exe.py
+├─ .github/workflows/
+│  └─ mobile_flutter_apk.yml      # mobile + desktop build pipeline
+├─ build_exe.py                   # desktop packaging helper
+├─ icon.ico                       # repository-level icon source
+├─ LICENSE
 └─ README.md
 ```
 
-## Mobile Migration Workspace / 移动端迁移工作区
+## Runtime & Build / 运行与构建
 
-The `mobile_flutter` folder is the active Flutter migration workspace.
-
-`mobile_flutter` 目录是当前 Flutter 迁移实现工作区。
-
-Current implementation in this workspace:
-
-当前已实现内容：
-
-- responsive shell that preserves desktop semantic zones (`Materials`, `Detail`, `Cart/Preview`)
-- compatible core models (`ColorEntry`, `Palette`)
-- compatibility codecs for `JSON`, `CSV`, `GPL`, `ASE`, and `PAL`
-- no new custom exchange format introduced
-
-- 保持桌面语义区域的响应式壳层（`Materials`、`Detail`、`Cart/Preview`）
-- 兼容核心模型（`ColorEntry`、`Palette`）
-- `JSON`、`CSV`、`GPL`、`ASE`、`PAL` 的兼容编解码
-- 未新增自定义交换格式
-
-## Run From Source / 源码运行
+### Desktop Source (Python) / 桌面源码版（Python）
 
 Recommended environment:
 
 建议环境：
 
-- Python 3.11
+- Python 3.11+
 - `PySide6`
 
-Run from the project root:
+Run from repository root:
 
-在项目根目录运行：
+在仓库根目录运行：
 
 ```bash
 python -m app.main
 ```
 
-## Ver 1.0.1 / 更新说明
+### Flutter Client / Flutter 客户端
 
-- 功能升级：配色生成数量调整为可输入模式，默认 `5`，支持最多 `20` 色，适配更复杂的科研绘图场景。
-- 安全加固：新增防倒卖声明与退款提醒，降低二次倒卖带来的误导风险。
-- 溯源优化：导出 `ASE`、`JSON`、`CSV` 时会自动写入开发者标识，便于来源识别。
-- 打包调整：桌面版改为单文件 `.exe`，分发和使用更直接。
+Recommended environment:
+
+建议环境：
+
+- Flutter stable (Dart SDK compatible with `pubspec.yaml`)
+
+Run from `mobile_flutter/`:
+
+在 `mobile_flutter/` 目录运行：
+
+```bash
+flutter pub get
+flutter test
+flutter run
+```
+
+## Packaging & CI / 打包与 CI
+
+The workflow `.github/workflows/mobile_flutter_apk.yml` builds artifacts for:
+
+`.github/workflows/mobile_flutter_apk.yml` 会构建以下产物：
+
+- Android APK
+- Android AAB
+- iOS unsigned IPA
+- Windows desktop package
+- Linux desktop package
+- macOS desktop package
+
+## Icon Notes / 图标说明
+
+- Repository icon source: `icon.ico`
+- Flutter icon input: `mobile_flutter/assets/icons/app_icon.png`
+- Mobile and desktop icon generation in CI is handled from Flutter icon configs.
+
+- 仓库图标源文件：`icon.ico`
+- Flutter 图标输入文件：`mobile_flutter/assets/icons/app_icon.png`
+- CI 中的移动端与桌面端图标通过 Flutter 图标配置统一生成。
+
+## Map Note / 地图说明
+
+The China map used in preview is a simplified display asset. For presentation purpose, the preview does not include the nine-dash line.
+
+预览中使用的中国地图为简化展示素材。出于展示目的，当前预览未显示九段线。
 
 ## Typical Workflow / 典型使用流程
 
-1. Choose `materials` and `library` folders.
-2. Import palette files, images, or PDF sources.
-3. Browse palettes on the left and inspect details in the center.
-4. Add useful colors to the cart on the right.
-5. Reorder, edit, and generate supporting colors.
-6. Check preview behavior in normal, colorblind, and grayscale modes.
-7. Save or export the final palette.
+1. Import palette files, images, or PDF sources.
+2. Browse and select useful palettes/colors.
+3. Add colors into export cart and adjust order.
+4. Generate supporting colors when needed.
+5. Preview in chart scenes and accessibility modes.
+6. Export to files or code snippets.
 
-1. 选择 `materials` 和 `library` 目录。
-2. 导入色卡文件、图片或 PDF 素材。
-3. 在左侧浏览素材，在中间查看详情。
-4. 把需要的颜色加入右侧拼配区。
-5. 调整顺序，补充或生成配色。
-6. 在正常、色盲、灰度模式下检查预览效果。
-7. 保存或导出最终色卡。
-
-## Current Scope / 当前状态
-
-The app is already usable for day-to-day scientific palette management, and it is still actively evolving.
-
-这个项目已经可以用于日常科研配色管理，并且仍在持续迭代中。
-
-Current focus:
-
-当前重点包括：
-
-- scientific palette management
-- image and PDF color extraction
-- plot-oriented preview and export workflow
-
-- 科研配色素材管理
-- 图片和 PDF 取色
-- 面向科研图表的预览与导出流程
+1. 导入色卡文件、图片或 PDF 素材。
+2. 浏览并选择需要的色卡与颜色。
+3. 将颜色加入导出区并调整顺序。
+4. 按需生成补充配色。
+5. 在图表场景与可读性模式下检查效果。
+6. 导出为文件或代码片段。
 
 ## Attribution / 署名保留
 
 - Upstream author: `Alsophila`
-- Migration repository keeps upstream non-commercial policy and author attribution.
-- Do not repackage, decompose features for resale, or use the project for commercial traffic diversion.
+- This repository keeps upstream attribution and non-commercial policy.
+- Do not repackage for resale or commercial traffic diversion.
 
 - 上游作者：`Alsophila`
-- 本迁移仓库保留上游非商用协议与署名。
-- 禁止拆解功能用于倒卖、引流或其他商业化分发。
+- 本仓库保留上游署名与非商用约束。
+- 禁止拆解功能用于倒卖或商业引流分发。
 
 ## License / 许可
 
-This project is intended for personal, academic, research, and other non-commercial use.
-Commercial use is not permitted without explicit permission from the author.
+This project is intended for personal, educational, and research non-commercial use.
+Commercial use requires explicit permission from the author.
 
-本项目面向个人、学习、科研及其他非商业用途。
-任何商业使用均需事先获得作者明确许可。
+本项目面向个人、学习、科研等非商业用途。
+任何商业使用需事先获得作者明确许可。
 
 License file:
 
@@ -212,5 +205,3 @@ License file:
 
 - `PolyForm Noncommercial 1.0.0`
 - see [LICENSE](LICENSE)
-
-

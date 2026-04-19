@@ -121,6 +121,11 @@ class _MainShellState extends State<MainShell> {
   bool _previewConfigExpanded = true;
   bool _previewResultExpanded = false;
   bool _previewEffectExpanded = false;
+  bool _previewSourceDrawerExpanded = true;
+  bool _previewCartDrawerExpanded = false;
+
+  bool _isExportEditMode = false;
+  final Set<int> _exportEditSelectedIndices = <int>{};
 
   bool _exportFormatExpanded = true;
   bool _exportGeneratorExpanded = true;
@@ -409,7 +414,8 @@ class _MainShellState extends State<MainShell> {
             sourceKind: ImportSourceKind.palette,
             sourceBytes: bytes,
             palette: palette,
-            extractionProfile: ExtractionProfile.defaultsForSource(ImportSourceKind.palette),
+            extractionProfile:
+                ExtractionProfile.defaultsForSource(ImportSourceKind.palette),
             extractionRuns: 1,
             importedAt: DateTime.now(),
             isFavorite: true,
@@ -433,7 +439,8 @@ class _MainShellState extends State<MainShell> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _setStatus(_tr('Import failed: {error}', params: <String, String>{'error': e.toString()}));
+          _setStatus(_tr('Import failed: {error}',
+              params: <String, String>{'error': e.toString()}));
           _isBusy = false;
         });
       }
@@ -477,7 +484,8 @@ class _MainShellState extends State<MainShell> {
         builder: (context) {
           return AlertDialog(
             title: Text(_tr('Remove Favorite Warning')),
-            content: Text(_tr('Removing this favorite will also delete its downloaded backup copy in the favorate folder.')),
+            content: Text(_tr(
+                'Removing this favorite will also delete its downloaded backup copy in the favorates folder.')),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -534,7 +542,7 @@ class _MainShellState extends State<MainShell> {
       _replaceRecord(updated);
       setState(() {
         _setStatus(_tr(
-          'Added {fileName} to favorites and backed up to favorate/{backupName}',
+          'Added {fileName} to favorites and backed up to favorates/{backupName}',
           params: <String, String>{
             'fileName': updated.fileName,
             'backupName': backupName,
@@ -571,6 +579,7 @@ class _MainShellState extends State<MainShell> {
         ));
       }
       _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
     });
     _applyAutoThemeSeedFromContext();
   }
@@ -581,6 +590,7 @@ class _MainShellState extends State<MainShell> {
       _exportColorKeys.remove(key);
       _exportColors.removeWhere((item) => _colorKey(item) == key);
       _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
       _setStatus(_tr(
         'Removed {hexCode} from cart.',
         params: <String, String>{'hexCode': color.hexCode},
@@ -596,6 +606,7 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _exportColors[index] = color;
       _rebuildExportKeys();
+      _exportEditSelectedIndices.clear();
       _setStatus(_tr(
         'Updated {name}.',
         params: <String, String>{'name': color.name},
@@ -641,7 +652,8 @@ class _MainShellState extends State<MainShell> {
                 if (normalized == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(_tr('Invalid HEX format, please input #RRGGBB')),
+                      content:
+                          Text(_tr('Invalid HEX format, please input #RRGGBB')),
                     ),
                   );
                   return;
@@ -671,6 +683,7 @@ class _MainShellState extends State<MainShell> {
       _exportColors.add(added);
       _rebuildExportKeys();
       _selectedExportColorIndex = _exportColors.length - 1;
+      _exportEditSelectedIndices.clear();
       _setStatus(_tr(
         'Added {hexCode} to cart.',
         params: <String, String>{'hexCode': added.hexCode},
@@ -687,6 +700,8 @@ class _MainShellState extends State<MainShell> {
       _selectedExportColorIndex = null;
       _isPickingBaseColor = false;
       _isPickingSecondaryColor = false;
+      _isExportEditMode = false;
+      _exportEditSelectedIndices.clear();
       _setStatus(_tr('Cart cleared.'));
     });
   }
@@ -727,6 +742,7 @@ class _MainShellState extends State<MainShell> {
       } else {
         _selectedExportColorIndex = index;
       }
+      _exportEditSelectedIndices.clear();
     });
   }
 
@@ -782,6 +798,7 @@ class _MainShellState extends State<MainShell> {
     setState(() {
       _syncExportPaletteFromColors(current.palette.colors);
       _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
       _setStatus(_tr('Loaded current file colors into export cart.'));
     });
     _applyAutoThemeSeedFromContext();
@@ -798,7 +815,8 @@ class _MainShellState extends State<MainShell> {
 
     for (final extension in _importService.supportedExportExtensions) {
       if (rawName.toLowerCase().endsWith(extension)) {
-        rawName = rawName.substring(0, rawName.length - extension.length).trim();
+        rawName =
+            rawName.substring(0, rawName.length - extension.length).trim();
         break;
       }
     }
@@ -1027,6 +1045,9 @@ class _MainShellState extends State<MainShell> {
   void _setGenerationKind(PaletteGenerationKind value) {
     setState(() {
       _generationKind = value;
+      if (value != PaletteGenerationKind.twoColorGradient) {
+        _isPickingSecondaryColor = false;
+      }
     });
   }
 
@@ -1107,6 +1128,144 @@ class _MainShellState extends State<MainShell> {
     });
   }
 
+  void _setExportEditMode(bool enabled) {
+    setState(() {
+      _isExportEditMode = enabled;
+      if (!enabled) {
+        _exportEditSelectedIndices.clear();
+      }
+    });
+  }
+
+  void _toggleExportEditMode() {
+    _setExportEditMode(!_isExportEditMode);
+  }
+
+  void _toggleExportEditSelection(int index) {
+    if (index < 0 || index >= _exportColors.length) {
+      return;
+    }
+    setState(() {
+      if (_exportEditSelectedIndices.contains(index)) {
+        _exportEditSelectedIndices.remove(index);
+      } else {
+        _exportEditSelectedIndices.add(index);
+      }
+    });
+  }
+
+  void _selectAllExportColorsForEdit() {
+    if (_exportColors.isEmpty) {
+      return;
+    }
+    setState(() {
+      _exportEditSelectedIndices
+        ..clear()
+        ..addAll(List<int>.generate(_exportColors.length, (index) => index));
+    });
+  }
+
+  void _invertExportEditSelection() {
+    if (_exportColors.isEmpty) {
+      return;
+    }
+    setState(() {
+      final inverted = <int>{};
+      for (var index = 0; index < _exportColors.length; index += 1) {
+        if (!_exportEditSelectedIndices.contains(index)) {
+          inverted.add(index);
+        }
+      }
+      _exportEditSelectedIndices
+        ..clear()
+        ..addAll(inverted);
+    });
+  }
+
+  void _deleteSelectedExportColors() {
+    if (_exportEditSelectedIndices.isEmpty) {
+      setState(() {
+        _setStatus(_tr('No color selected.'));
+      });
+      return;
+    }
+
+    final selected = _exportEditSelectedIndices.toList()..sort((a, b) => b - a);
+    final removedCount = selected.length;
+
+    setState(() {
+      for (final index in selected) {
+        if (index >= 0 && index < _exportColors.length) {
+          _exportColors.removeAt(index);
+        }
+      }
+      _rebuildExportKeys();
+      _exportEditSelectedIndices.clear();
+      _selectedExportColorIndex = null;
+      _setStatus(_tr(
+        'Deleted {count} selected colors.',
+        params: <String, String>{'count': removedCount.toString()},
+      ));
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
+  void _reorderExportColors(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _exportColors.length) {
+      return;
+    }
+
+    setState(() {
+      var targetIndex = newIndex;
+      if (targetIndex > oldIndex) {
+        targetIndex -= 1;
+      }
+      targetIndex = targetIndex.clamp(0, _exportColors.length - 1);
+
+      final item = _exportColors.removeAt(oldIndex);
+      _exportColors.insert(targetIndex, item);
+
+      _rebuildExportKeys();
+      _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
+      _setStatus(_tr('Reordered export colors.'));
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
+  void _addAllSamplingResultColors() {
+    final colors = _selectedFile?.palette.colors ?? const <ColorEntry>[];
+    if (colors.isEmpty) {
+      setState(() {
+        _setStatus(_tr('No colors available in current file.'));
+      });
+      return;
+    }
+
+    var addedCount = 0;
+    setState(() {
+      for (final color in colors) {
+        final key = _colorKey(color);
+        if (_exportColorKeys.contains(key)) {
+          continue;
+        }
+        _exportColorKeys.add(key);
+        _exportColors.add(color);
+        addedCount += 1;
+      }
+      _selectedExportColorIndex = null;
+      _exportEditSelectedIndices.clear();
+      _setStatus(_tr(
+        'Added {count} colors to export cart.',
+        params: <String, String>{'count': addedCount.toString()},
+      ));
+    });
+
+    _applyAutoThemeSeedFromContext();
+  }
+
   void _generateAndReplace() {
     _generateColors(append: false);
   }
@@ -1177,6 +1336,8 @@ class _MainShellState extends State<MainShell> {
       ..clear()
       ..addAll(colors);
     _rebuildExportKeys();
+    _isExportEditMode = false;
+    _exportEditSelectedIndices.clear();
   }
 
   void _rebuildExportKeys() {
@@ -1290,6 +1451,26 @@ class _MainShellState extends State<MainShell> {
       if (expanded) {
         _previewConfigExpanded = false;
         _previewResultExpanded = false;
+      }
+    });
+  }
+
+  void _togglePreviewSourceDrawer() {
+    setState(() {
+      final next = !_previewSourceDrawerExpanded;
+      _previewSourceDrawerExpanded = next;
+      if (next) {
+        _previewCartDrawerExpanded = false;
+      }
+    });
+  }
+
+  void _togglePreviewCartDrawer() {
+    setState(() {
+      final next = !_previewCartDrawerExpanded;
+      _previewCartDrawerExpanded = next;
+      if (next) {
+        _previewSourceDrawerExpanded = false;
       }
     });
   }
@@ -1512,10 +1693,15 @@ class _MainShellState extends State<MainShell> {
 
     final cartSummaryPanel = PreviewCartSummaryPanel(
       cartColors: _exportColors,
-      onRemoveColor: _removeExportColor,
-      onClearPressed: _clearExportColors,
-      onUseSelectedPalettePressed: _useSelectedPaletteAsExportBase,
       statusMessage: _statusForPage(WorkspacePage.preview.index),
+      editMode: _isExportEditMode,
+      selectedIndices: _exportEditSelectedIndices,
+      onEditModeChanged: _setExportEditMode,
+      onDeleteSelectedPressed: _deleteSelectedExportColors,
+      onSelectAllPressed: _selectAllExportColorsForEdit,
+      onInvertSelectionPressed: _invertExportEditSelection,
+      onToggleSelection: _toggleExportEditSelection,
+      onReorder: _reorderExportColors,
     );
 
     final canvasPanel = PreviewCanvasPanel(
@@ -1551,6 +1737,7 @@ class _MainShellState extends State<MainShell> {
       onPreviewAlphaPercentChanged: _setPreviewAlphaPercent,
       previewMarkerShape: _previewMarkerShape,
       onPreviewMarkerShapeChanged: _setPreviewMarkerShape,
+      onAddAllSamplingPressed: _addAllSamplingResultColors,
       configExpanded: _previewConfigExpanded,
       resultExpanded: _previewResultExpanded,
       effectExpanded: _previewEffectExpanded,
@@ -1561,42 +1748,65 @@ class _MainShellState extends State<MainShell> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final leftStack = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: sourcePanel),
-            const SizedBox(height: 10),
-            Expanded(child: cartSummaryPanel),
-          ],
-        );
-
-        if (constraints.maxWidth >= LayoutContract.expandedBreakpoint) {
-          return Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(flex: 26, child: leftStack),
-                const SizedBox(width: 10),
-                Expanded(flex: 40, child: canvasPanel),
-                const SizedBox(width: 10),
-                Expanded(flex: 34, child: inspectorPanel),
-              ],
-            ),
-          );
-        }
-
         if (constraints.maxWidth >= LayoutContract.mediumBreakpoint) {
+          final expandedDesktop =
+              constraints.maxWidth >= LayoutContract.expandedBreakpoint;
+          final leftOpenWidth = expandedDesktop ? 320.0 : 280.0;
+          final rightOpenWidth = expandedDesktop ? 320.0 : 280.0;
+          const collapsedWidth = 52.0;
+
+          final centerPanel = expandedDesktop
+              ? Row(
+                  children: [
+                    Expanded(flex: 56, child: canvasPanel),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 44, child: inspectorPanel),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Expanded(flex: 52, child: canvasPanel),
+                    const SizedBox(height: 10),
+                    Expanded(flex: 48, child: inspectorPanel),
+                  ],
+                );
+
           return Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(flex: 30, child: leftStack),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  width: _previewSourceDrawerExpanded
+                      ? leftOpenWidth
+                      : collapsedWidth,
+                  child: _PreviewSideDrawer(
+                    expanded: _previewSourceDrawerExpanded,
+                    isLeft: true,
+                    arrowIcon: Icons.arrow_forward,
+                    onToggle: _togglePreviewSourceDrawer,
+                    child: sourcePanel,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(flex: 36, child: canvasPanel),
+                Expanded(child: centerPanel),
                 const SizedBox(width: 10),
-                Expanded(flex: 34, child: inspectorPanel),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  width: _previewCartDrawerExpanded
+                      ? rightOpenWidth
+                      : collapsedWidth,
+                  child: _PreviewSideDrawer(
+                    expanded: _previewCartDrawerExpanded,
+                    isLeft: false,
+                    arrowIcon: Icons.arrow_back,
+                    onToggle: _togglePreviewCartDrawer,
+                    child: cartSummaryPanel,
+                  ),
+                ),
               ],
             ),
           );
@@ -1683,15 +1893,14 @@ class _MainShellState extends State<MainShell> {
 
     final colorsPanel = ExportColorListPanel(
       cartColors: _exportColors,
-      onRemoveColor: _removeExportColor,
       onUpdateColor: _updateExportColor,
-      onClearPressed: _clearExportColors,
-      onUseSelectedPalettePressed: _useSelectedPaletteAsExportBase,
       statusMessage: _statusForPage(WorkspacePage.export.index),
       isBusy: _isBusy,
       selectedIndex: _selectedExportColorIndex,
       isBaseColorPicking: _isPickingBaseColor,
       isSecondaryColorPicking: _isPickingSecondaryColor,
+      editMode: _isExportEditMode,
+      selectedIndices: _exportEditSelectedIndices,
       listExpanded: _exportColorListExpanded,
       previewExpanded: _exportPreviewExpanded,
       previewFileName:
@@ -1703,6 +1912,12 @@ class _MainShellState extends State<MainShell> {
       onPreviewExpandedChanged: _setExportPreviewExpanded,
       onSelectedIndexChanged: _selectExportColorIndex,
       onAddManualColorPressed: _addManualExportColor,
+      onEditModeToggle: _toggleExportEditMode,
+      onDeleteSelectedPressed: _deleteSelectedExportColors,
+      onSelectAllPressed: _selectAllExportColorsForEdit,
+      onInvertSelectionPressed: _invertExportEditSelection,
+      onToggleSelection: _toggleExportEditSelection,
+      onReorder: _reorderExportColors,
     );
 
     return LayoutBuilder(
@@ -1922,8 +2137,6 @@ class _MainShellState extends State<MainShell> {
                     }
                   },
                 ),
-                const SizedBox(height: 8),
-                Text(_tr('System language falls back to English (US) when unsupported.')),
               ],
             ),
           ),
@@ -2056,6 +2269,67 @@ class _SettingsCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PreviewSideDrawer extends StatelessWidget {
+  const _PreviewSideDrawer({
+    required this.expanded,
+    required this.isLeft,
+    required this.arrowIcon,
+    required this.onToggle,
+    required this.child,
+  });
+
+  final bool expanded;
+  final bool isLeft;
+  final IconData arrowIcon;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOutCubic,
+          opacity: expanded ? 1 : 0,
+          child: IgnorePointer(
+            ignoring: !expanded,
+            child: Padding(
+              padding: isLeft
+                  ? const EdgeInsets.only(right: 46)
+                  : const EdgeInsets.only(left: 46),
+              child: child,
+            ),
+          ),
+        ),
+        Align(
+          alignment: isLeft ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: SizedBox(
+              width: 38,
+              height: 38,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  shape: const CircleBorder(),
+                  padding: EdgeInsets.zero,
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                ),
+                onPressed: onToggle,
+                child: Icon(arrowIcon, size: 20),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

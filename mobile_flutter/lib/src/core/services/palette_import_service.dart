@@ -103,6 +103,10 @@ class PaletteImportService {
   ];
 
   static const List<String> _pdfExtensions = <String>['pdf'];
+  static const String _androidPublicRootPath =
+      '/storage/emulated/0/Documents/CLM';
+  static const String _androidExportFolderName = 'export';
+  static const String _androidFavoriteFolderName = 'favorates';
 
   List<String> get supportedImportExtensions => <String>[
         ..._paletteExtensions,
@@ -117,24 +121,21 @@ class PaletteImportService {
         '.cpt',
         '.ase',
         '.pal',
+        '.r',
+        '.py',
+        '.m',
       ];
 
   bool get canCaptureFromCamera {
     if (kIsWeb) {
       return false;
     }
-    if (Platform.isIOS) {
-      return false;
-    }
-    return Platform.isAndroid;
+    return Platform.isAndroid || Platform.isIOS;
   }
 
   String get cameraCaptureDisabledReason {
     if (kIsWeb) {
       return 'Camera sampling is not supported on Web.';
-    }
-    if (Platform.isIOS) {
-      return 'Camera permission is not declared in the current iOS host app. Camera sampling is temporarily disabled to avoid crashes.';
     }
     return 'Camera sampling is not supported on the current platform.';
   }
@@ -202,9 +203,7 @@ class PaletteImportService {
     } on MissingPluginException catch (error) {
       throw UnsupportedError('Camera plugin is unavailable: $error');
     } on PlatformException catch (error) {
-      throw UnsupportedError(
-        'Camera invocation failed: ${error.message ?? error.code}',
-      );
+      throw UnsupportedError(_buildCameraInvocationError(error));
     }
 
     if (captured == null) {
@@ -257,7 +256,7 @@ class PaletteImportService {
   }) async {
     final baseDir = await _resolveExportBaseDirectory();
     final favoriteDir =
-        Directory(path.join(baseDir.path, 'ColorManager', 'favorate'));
+        Directory(path.join(baseDir.path, _androidFavoriteFolderName));
     await favoriteDir.create(recursive: true);
 
     final baseName = _sanitizeFileName(path.basenameWithoutExtension(fileName));
@@ -275,7 +274,7 @@ class PaletteImportService {
 
     final baseDir = await _resolveExportBaseDirectory();
     final target = File(
-      path.join(baseDir.path, 'ColorManager', 'favorate', backupName),
+      path.join(baseDir.path, _androidFavoriteFolderName, backupName),
     );
     if (await target.exists()) {
       await target.delete();
@@ -311,7 +310,11 @@ class PaletteImportService {
     required ExtractionProfile extractionProfile,
     String? sourcePath,
   }) async {
-    final normalized = _normalizeExtension(extension);
+    final normalized = _normalizeExtension(
+      extension,
+      fallbackFileName: fileName,
+      fallbackSourceKind: sourceKind,
+    );
     final extracted = await _extractFromSource(
       fileName: fileName,
       sourceBytes: sourceBytes,
@@ -344,7 +347,7 @@ class PaletteImportService {
 
     final baseDir = await _resolveExportBaseDirectory();
     final exportDirectory =
-        Directory(path.join(baseDir.path, 'ColorManager', 'exports'));
+        Directory(path.join(baseDir.path, _androidExportFolderName));
     await exportDirectory.create(recursive: true);
 
     final safeName = _sanitizeFileName(
@@ -381,7 +384,7 @@ class PaletteImportService {
     );
 
     final isTextPreview = switch (normalizedExtension) {
-      '.json' || '.csv' || '.gpl' || '.cpt' => true,
+      '.json' || '.csv' || '.gpl' || '.cpt' || '.r' || '.py' || '.m' => true,
       _ => false,
     };
 
@@ -620,6 +623,32 @@ class PaletteImportService {
     return ImportSourceKind.palette;
   }
 
+  String _buildCameraInvocationError(PlatformException error) {
+    final code = error.code.toLowerCase();
+    final message = (error.message ?? '').trim();
+    final lowerMessage = message.toLowerCase();
+
+    if (code.contains('permission') ||
+        code.contains('denied') ||
+        code.contains('not_authorized') ||
+        code.contains('access_denied')) {
+      return 'Camera permission denied. Please grant camera permission in system settings.';
+    }
+
+    if (Platform.isIOS &&
+        (lowerMessage.contains('nscamerausagedescription') ||
+            lowerMessage.contains('privacy-sensitive data'))) {
+      return 'iOS host app is missing NSCameraUsageDescription in Info.plist.';
+    }
+
+    if (code.contains('camera_unavailable') ||
+        code.contains('no_available_camera')) {
+      return 'No available camera device was found.';
+    }
+
+    return 'Camera invocation failed: ${message.isEmpty ? error.code : message}';
+  }
+
   ExtractionProfile _normalizeProfile(
     ExtractionProfile profile,
     ImportSourceKind sourceKind,
@@ -648,15 +677,63 @@ class PaletteImportService {
   }
 
   Future<Directory> _resolveExportBaseDirectory() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final androidPublic = Directory(_androidPublicRootPath);
+        await androidPublic.create(recursive: true);
+        return androidPublic;
+      } catch (_) {
+        // Fall through to app-private storage when public path is unavailable.
+      }
+    }
+
     try {
-      return await getApplicationDocumentsDirectory();
+      final appDir = await getApplicationDocumentsDirectory();
+      final legacyRoot = Directory(path.join(appDir.path, 'ColorManager'));
+      await legacyRoot.create(recursive: true);
+      return legacyRoot;
     } catch (_) {
       return Directory.systemTemp;
     }
   }
 
-  String _normalizeExtension(String fileName) {
-    final ext = path.extension(fileName).trim().toLowerCase();
+  String _normalizeExtension(
+    String fileNameOrExtension, {
+    String? fallbackFileName,
+    ImportSourceKind? fallbackSourceKind,
+  }) {
+    final normalizedInput = fileNameOrExtension.trim();
+    if (normalizedInput.isNotEmpty) {
+      if (normalizedInput.startsWith('.') && normalizedInput.length > 1) {
+        final direct = normalizedInput.toLowerCase();
+        if (RegExp(r'^\.[a-z0-9]+$').hasMatch(direct)) {
+          return direct;
+        }
+      }
+
+      final ext = path.extension(normalizedInput).trim().toLowerCase();
+      if (ext.isNotEmpty) {
+        return ext;
+      }
+    }
+
+    if (fallbackFileName != null && fallbackFileName.trim().isNotEmpty) {
+      final fallbackExt = path.extension(fallbackFileName).trim().toLowerCase();
+      if (fallbackExt.isNotEmpty) {
+        return fallbackExt;
+      }
+    }
+
+    if (fallbackSourceKind != null) {
+      return switch (fallbackSourceKind) {
+        ImportSourceKind.pdf => '.pdf',
+        ImportSourceKind.image => '.png',
+        ImportSourceKind.camera => '.jpg',
+        ImportSourceKind.palette => '.json',
+      };
+    }
+
+    final ext = path.extension(normalizedInput).trim().toLowerCase();
     if (ext.isEmpty) {
       throw const FormatException('Selected file has no extension.');
     }
@@ -712,7 +789,8 @@ class PaletteImportService {
     const maxPreviewBytes = 192;
     final previewBytes = bytes.take(maxPreviewBytes).toList(growable: false);
     final buffer = StringBuffer()
-      ..writeln('# Binary format ${extension.toUpperCase().replaceFirst('.', '')}')
+      ..writeln(
+          '# Binary format ${extension.toUpperCase().replaceFirst('.', '')}')
       ..writeln('# Bytes: ${bytes.length}')
       ..writeln('# Palette: ${palette.name}')
       ..writeln('# Colors: ${palette.colors.length}')

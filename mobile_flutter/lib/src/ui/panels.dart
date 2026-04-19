@@ -218,8 +218,10 @@ class MaterialsPanel extends StatelessWidget {
                               '{count} colors · {format} · {mode} · Re-sampled {runs} times',
                               params: <String, String>{
                                 'count': file.palette.colors.length.toString(),
-                                'format': file.palette.sourceFormat.toUpperCase(),
-                                'mode': context.tr(_modeLabel(file.extractionProfile.mode)),
+                                'format':
+                                    file.palette.sourceFormat.toUpperCase(),
+                                'mode': context.tr(
+                                    _modeLabel(file.extractionProfile.mode)),
                                 'runs': file.extractionRuns.toString(),
                               },
                             ),
@@ -316,7 +318,8 @@ class DetailPanel extends StatelessWidget {
         subtitle: 'File preview, sampling modes, and chart preview.',
         child: _EmptyState(
           title: 'No file selected',
-          description: 'Import or select a file from the left to start sampling.',
+          description:
+              'Import or select a file from the left to start sampling.',
           action: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -753,7 +756,8 @@ class CartPreviewPanel extends StatelessWidget {
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
                             value: value,
-                            child: Text(context.tr(_whiteTemperatureLabel(value))),
+                            child:
+                                Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
                         )
                         .toList(growable: false),
@@ -1101,6 +1105,7 @@ class PreviewInspectorPanel extends StatelessWidget {
     required this.onPreviewAlphaPercentChanged,
     required this.previewMarkerShape,
     required this.onPreviewMarkerShapeChanged,
+    required this.onAddAllSamplingPressed,
     required this.configExpanded,
     required this.resultExpanded,
     required this.effectExpanded,
@@ -1133,6 +1138,7 @@ class PreviewInspectorPanel extends StatelessWidget {
   final ValueChanged<double> onPreviewAlphaPercentChanged;
   final PaletteMarkerShape previewMarkerShape;
   final ValueChanged<PaletteMarkerShape> onPreviewMarkerShapeChanged;
+  final VoidCallback onAddAllSamplingPressed;
   final bool configExpanded;
   final bool resultExpanded;
   final bool effectExpanded;
@@ -1179,21 +1185,40 @@ class PreviewInspectorPanel extends StatelessWidget {
             title: 'Sampling Results',
             expanded: resultExpanded,
             onExpandedChanged: onResultExpandedChanged,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: file!.palette.colors
-                  .map(
-                    (color) => SizedBox(
-                      width: 160,
-                      child: _ColorCard(
-                        color: color,
-                        selected: isColorInCart(color),
-                        onPressed: () => onToggleCartColor(color),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
+            headerAction: FilledButton.tonalIcon(
+              onPressed: onAddAllSamplingPressed,
+              icon: const Icon(Icons.playlist_add, size: 16),
+              label: Text(context.tr('Add All Colors')),
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final columns = width >= 420 ? 2 : 1;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: columns == 2 ? 2.4 : 2.8,
+                  ),
+                  itemCount: file!.palette.colors.length,
+                  itemBuilder: (context, index) {
+                    final color = file!.palette.colors[index];
+                    return _ColorCard(
+                      color: color,
+                      selected: isColorInCart(color),
+                      onPressed: () => onToggleCartColor(color),
+                    );
+                  },
+                );
+              },
             ),
           ),
           const SizedBox(height: 8),
@@ -1350,12 +1375,14 @@ class _FoldCard extends StatelessWidget {
     required this.expanded,
     required this.onExpandedChanged,
     required this.child,
+    this.headerAction,
   });
 
   final String title;
   final bool expanded;
   final ValueChanged<bool> onExpandedChanged;
   final Widget child;
+  final Widget? headerAction;
 
   static const Duration _kAnimationDuration = Duration(milliseconds: 220);
 
@@ -1382,6 +1409,10 @@ class _FoldCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
+                  if (headerAction != null) ...[
+                    headerAction!,
+                    const SizedBox(width: 6),
+                  ],
                   AnimatedRotation(
                     duration: _kAnimationDuration,
                     curve: Curves.easeOutCubic,
@@ -1408,7 +1439,7 @@ class _FoldCard extends StatelessWidget {
                   curve: Curves.easeInOutCubic,
                   opacity: expanded ? 1 : 0,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
                     child: child,
                   ),
                 ),
@@ -1479,7 +1510,8 @@ class PreviewSourcePanel extends StatelessWidget {
                               '{count} colors · {format}',
                               params: <String, String>{
                                 'count': file.palette.colors.length.toString(),
-                                'format': file.palette.sourceFormat.toUpperCase(),
+                                'format':
+                                    file.palette.sourceFormat.toUpperCase(),
                               },
                             ),
                             maxLines: 2,
@@ -1501,17 +1533,27 @@ class PreviewCartSummaryPanel extends StatelessWidget {
   const PreviewCartSummaryPanel({
     super.key,
     required this.cartColors,
-    required this.onRemoveColor,
-    required this.onClearPressed,
-    required this.onUseSelectedPalettePressed,
     required this.statusMessage,
+    required this.editMode,
+    required this.selectedIndices,
+    required this.onEditModeChanged,
+    required this.onDeleteSelectedPressed,
+    required this.onSelectAllPressed,
+    required this.onInvertSelectionPressed,
+    required this.onToggleSelection,
+    required this.onReorder,
   });
 
   final List<ColorEntry> cartColors;
-  final ValueChanged<ColorEntry> onRemoveColor;
-  final VoidCallback onClearPressed;
-  final VoidCallback onUseSelectedPalettePressed;
   final String? statusMessage;
+  final bool editMode;
+  final Set<int> selectedIndices;
+  final ValueChanged<bool> onEditModeChanged;
+  final VoidCallback onDeleteSelectedPressed;
+  final VoidCallback onSelectAllPressed;
+  final VoidCallback onInvertSelectionPressed;
+  final ValueChanged<int> onToggleSelection;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -1523,21 +1565,55 @@ class PreviewCartSummaryPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: cartColors.isEmpty ? null : onClearPressed,
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(context.tr('Clear')),
-                ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: editMode ? 42 : 138,
+                height: 40,
+                child: editMode
+                    ? OutlinedButton(
+                        onPressed: () => onEditModeChanged(false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          shape: const CircleBorder(),
+                        ),
+                        child: const Text('X'),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: cartColors.isEmpty
+                            ? null
+                            : () => onEditModeChanged(true),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(context.tr('Edit Export Cart')),
+                      ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onUseSelectedPalettePressed,
-                  icon: const Icon(Icons.layers_outlined),
-                  label: Text(context.tr('Load Current File')),
+              if (editMode) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: selectedIndices.isEmpty
+                        ? null
+                        : onDeleteSelectedPressed,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(context.tr('Delete Selected')),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
+                    child: Text(context.tr('Select All')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed:
+                        cartColors.isEmpty ? null : onInvertSelectionPressed,
+                    child: Text(context.tr('Invert Selection')),
+                  ),
+                ),
+              ],
             ],
           ),
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
@@ -1552,23 +1628,44 @@ class PreviewCartSummaryPanel extends StatelessWidget {
                     description:
                         'Tap colors in the middle preview to add to export cart.',
                   )
-                : ListView.separated(
+                : ReorderableListView.builder(
                     itemCount: cartColors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                    onReorder: onReorder,
+                    buildDefaultDragHandles: false,
                     itemBuilder: (context, index) {
                       final color = cartColors[index];
+                      final selected = selectedIndices.contains(index);
+                      final borderColor = selected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.outlineVariant;
+
                       return Card(
-                        margin: EdgeInsets.zero,
+                        key: ValueKey<String>(
+                            'preview-cart-${color.hexCode}-$index'),
+                        margin: const EdgeInsets.only(bottom: 4),
                         clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: borderColor,
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
                         child: ListTile(
                           dense: true,
+                          onTap:
+                              editMode ? () => onToggleSelection(index) : null,
                           leading: _ColorDot(hexCode: color.hexCode),
                           title: Text(color.name),
                           subtitle: Text(color.hexCode),
-                          trailing: IconButton(
-                            tooltip: context.tr('Remove'),
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () => onRemoveColor(color),
+                          trailing: ReorderableDragStartListener(
+                            index: index,
+                            child: Icon(
+                              Icons.drag_indicator,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                           ),
                         ),
                       );
@@ -1752,30 +1849,63 @@ class ExportOptionsPanel extends StatelessWidget {
                 if (uniqueCandidates.isEmpty)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(context.tr('Add colors to the export list first')),
+                    child:
+                        Text(context.tr('Add colors to the export list first')),
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PickHexField(
-                        label: 'Base',
-                        hexCode: baseHex,
-                        active: isBaseColorPicking,
-                        enabled: uniqueCandidates.isNotEmpty,
-                        onTap: onBaseColorFieldPressed,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    return SizeTransition(
+                      axis: Axis.horizontal,
+                      sizeFactor: animation,
+                      child: FadeTransition(
+                        opacity: animation,
+                        child: child,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _PickHexField(
-                        label: 'Secondary',
-                        hexCode: secondaryHex,
-                        active: isSecondaryColorPicking,
-                        enabled: uniqueCandidates.isNotEmpty,
-                        onTap: onSecondaryColorFieldPressed,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
+                  child:
+                      generationKind == PaletteGenerationKind.twoColorGradient
+                          ? Row(
+                              key: const ValueKey<String>('dual-color-fields'),
+                              children: [
+                                Expanded(
+                                  child: _PickHexField(
+                                    label: context.tr('Base (HEX)'),
+                                    hexCode: baseHex,
+                                    active: isBaseColorPicking,
+                                    enabled: uniqueCandidates.isNotEmpty,
+                                    onTap: onBaseColorFieldPressed,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _PickHexField(
+                                    label: context.tr('Secondary (HEX)'),
+                                    hexCode: secondaryHex,
+                                    active: isSecondaryColorPicking,
+                                    enabled: uniqueCandidates.isNotEmpty,
+                                    onTap: onSecondaryColorFieldPressed,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              key: const ValueKey<String>('single-base-field'),
+                              children: [
+                                Expanded(
+                                  child: _PickHexField(
+                                    label: context.tr('Base (HEX)'),
+                                    hexCode: baseHex,
+                                    active: isBaseColorPicking,
+                                    enabled: uniqueCandidates.isNotEmpty,
+                                    onTap: onBaseColorFieldPressed,
+                                  ),
+                                ),
+                              ],
+                            ),
                 ),
                 if (isBaseColorPicking || isSecondaryColorPicking) ...[
                   const SizedBox(height: 6),
@@ -1828,7 +1958,8 @@ class ExportOptionsPanel extends StatelessWidget {
                         .map(
                           (value) => DropdownMenuItem<WhiteTemperature>(
                             value: value,
-                            child: Text(context.tr(_whiteTemperatureLabel(value))),
+                            child:
+                                Text(context.tr(_whiteTemperatureLabel(value))),
                           ),
                         )
                         .toList(growable: false),
@@ -2018,15 +2149,14 @@ class ExportColorListPanel extends StatelessWidget {
   const ExportColorListPanel({
     super.key,
     required this.cartColors,
-    required this.onRemoveColor,
     required this.onUpdateColor,
-    required this.onClearPressed,
-    required this.onUseSelectedPalettePressed,
     required this.statusMessage,
     required this.isBusy,
     required this.selectedIndex,
     required this.isBaseColorPicking,
     required this.isSecondaryColorPicking,
+    required this.editMode,
+    required this.selectedIndices,
     required this.listExpanded,
     required this.previewExpanded,
     required this.previewFileName,
@@ -2037,18 +2167,23 @@ class ExportColorListPanel extends StatelessWidget {
     required this.onPreviewExpandedChanged,
     required this.onSelectedIndexChanged,
     required this.onAddManualColorPressed,
+    required this.onEditModeToggle,
+    required this.onDeleteSelectedPressed,
+    required this.onSelectAllPressed,
+    required this.onInvertSelectionPressed,
+    required this.onToggleSelection,
+    required this.onReorder,
   });
 
   final List<ColorEntry> cartColors;
-  final ValueChanged<ColorEntry> onRemoveColor;
   final void Function(int index, ColorEntry color) onUpdateColor;
-  final VoidCallback onClearPressed;
-  final VoidCallback onUseSelectedPalettePressed;
   final String? statusMessage;
   final bool isBusy;
   final int? selectedIndex;
   final bool isBaseColorPicking;
   final bool isSecondaryColorPicking;
+  final bool editMode;
+  final Set<int> selectedIndices;
   final bool listExpanded;
   final bool previewExpanded;
   final String previewFileName;
@@ -2059,6 +2194,12 @@ class ExportColorListPanel extends StatelessWidget {
   final ValueChanged<bool> onPreviewExpandedChanged;
   final ValueChanged<int> onSelectedIndexChanged;
   final Future<void> Function() onAddManualColorPressed;
+  final VoidCallback onEditModeToggle;
+  final VoidCallback onDeleteSelectedPressed;
+  final VoidCallback onSelectAllPressed;
+  final VoidCallback onInvertSelectionPressed;
+  final ValueChanged<int> onToggleSelection;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
@@ -2073,16 +2214,44 @@ class ExportColorListPanel extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              OutlinedButton.icon(
-                onPressed: cartColors.isEmpty ? null : onClearPressed,
-                icon: const Icon(Icons.delete_outline),
-                label: Text(context.tr('Clear Export Cart')),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: editMode ? 42 : 138,
+                height: 40,
+                child: editMode
+                    ? OutlinedButton(
+                        onPressed: onEditModeToggle,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          shape: const CircleBorder(),
+                        ),
+                        child: const Text('X'),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: cartColors.isEmpty ? null : onEditModeToggle,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(context.tr('Edit Export Cart')),
+                      ),
               ),
-              OutlinedButton.icon(
-                onPressed: onUseSelectedPalettePressed,
-                icon: const Icon(Icons.layers_outlined),
-                label: Text(context.tr('Load Current File')),
-              ),
+              if (editMode)
+                OutlinedButton.icon(
+                  onPressed:
+                      selectedIndices.isEmpty ? null : onDeleteSelectedPressed,
+                  icon: const Icon(Icons.delete_outline),
+                  label: Text(context.tr('Delete Selected')),
+                ),
+              if (editMode)
+                OutlinedButton(
+                  onPressed: cartColors.isEmpty ? null : onSelectAllPressed,
+                  child: Text(context.tr('Select All')),
+                ),
+              if (editMode)
+                OutlinedButton(
+                  onPressed:
+                      cartColors.isEmpty ? null : onInvertSelectionPressed,
+                  child: Text(context.tr('Invert Selection')),
+                ),
               FilledButton.tonalIcon(
                 onPressed: isBusy ? null : () => onAddManualColorPressed(),
                 icon: const Icon(Icons.add_circle_outline),
@@ -2146,33 +2315,71 @@ class ExportColorListPanel extends StatelessWidget {
                         : Column(
                             children: [
                               Expanded(
-                                child: ListView.separated(
+                                child: ReorderableListView.builder(
                                   itemCount: cartColors.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 4),
+                                  onReorder: onReorder,
+                                  buildDefaultDragHandles: false,
                                   itemBuilder: (context, index) {
                                     final color = cartColors[index];
+                                    final editSelected =
+                                        selectedIndices.contains(index);
+                                    final normalSelected =
+                                        selectedIndex == index;
+                                    final selected = editMode
+                                        ? editSelected
+                                        : normalSelected;
+                                    final borderColor = selected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .outlineVariant;
+
                                     return Card(
+                                      key: ValueKey<String>(
+                                          'export-list-${color.hexCode}-$index'),
                                       margin: EdgeInsets.zero,
                                       clipBehavior: Clip.antiAlias,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(
+                                          color: borderColor,
+                                          width: selected ? 2 : 1,
+                                        ),
+                                      ),
                                       child: ListTile(
-                                        selected: selectedIndex == index,
-                                        leading: _ColorDot(hexCode: color.hexCode),
+                                        selected: selected,
+                                        leading:
+                                            _ColorDot(hexCode: color.hexCode),
                                         title: Text(color.name),
                                         subtitle: Text(color.hexCode),
-                                        onTap: () => onSelectedIndexChanged(index),
-                                        onLongPress: () => _showColorEditDialog(
-                                          context,
-                                          index,
-                                          color,
-                                          onUpdateColor,
-                                        ),
-                                        trailing: IconButton(
-                                          tooltip: context.tr('Remove'),
-                                          icon: const Icon(
-                                            Icons.remove_circle_outline,
+                                        onTap: () {
+                                          if (isBaseColorPicking ||
+                                              isSecondaryColorPicking) {
+                                            onSelectedIndexChanged(index);
+                                            return;
+                                          }
+                                          if (editMode) {
+                                            onToggleSelection(index);
+                                            return;
+                                          }
+                                          onSelectedIndexChanged(index);
+                                        },
+                                        onLongPress: editMode
+                                            ? null
+                                            : () => _showColorEditDialog(
+                                                  context,
+                                                  index,
+                                                  color,
+                                                  onUpdateColor,
+                                                ),
+                                        trailing: ReorderableDragStartListener(
+                                          index: index,
+                                          child: Icon(
+                                            Icons.drag_indicator,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
-                                          onPressed: () => onRemoveColor(color),
                                         ),
                                       ),
                                     );
@@ -2187,7 +2394,8 @@ class ExportColorListPanel extends StatelessWidget {
                                       .map(
                                         (color) => Expanded(
                                           child: Container(
-                                            color: _parseHexColor(color.hexCode),
+                                            color:
+                                                _parseHexColor(color.hexCode),
                                           ),
                                         ),
                                       )
@@ -2234,6 +2442,7 @@ class _ExportFilePreview extends StatelessWidget {
     r'#(?:[0-9A-Fa-f]{6})\b|"(?:[^"\\]|\\.)*"|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?|[{}\[\]:,]|[A-Za-z_][A-Za-z0-9_\.]*',
   );
   static final RegExp _hexPattern = RegExp(r'^#(?:[0-9A-Fa-f]{6})$');
+  static final RegExp _quotedHexPattern = RegExp(r'^"#(?:[0-9A-Fa-f]{6})"$');
   static final RegExp _numberPattern = RegExp(r'^-?\d+(?:\.\d+)?$');
   static final RegExp _keywordPattern = RegExp(r'^(?:true|false|null)$');
   static final RegExp _punctuationPattern = RegExp(r'^[{}\[\]:,]$');
@@ -2270,7 +2479,8 @@ class _ExportFilePreview extends StatelessWidget {
         darkScheme: darkScheme,
         child: Center(
           child: Text(
-            context.tr('Export cart is empty, or current format cannot be previewed.'),
+            context.tr(
+                'Export cart is empty, or current format cannot be previewed.'),
             style: TextStyle(color: darkScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
@@ -2413,6 +2623,7 @@ class _ExportFilePreview extends StatelessWidget {
       }
 
       final token = match.group(0)!;
+      final isKey = _isLikelyObjectKeyToken(token, line, match.end);
       spans.add(
         TextSpan(
           text: token,
@@ -2421,6 +2632,7 @@ class _ExportFilePreview extends StatelessWidget {
             baseStyle,
             darkScheme,
             commentLine: commentLine,
+            isKey: isKey,
           ),
         ),
       );
@@ -2441,11 +2653,26 @@ class _ExportFilePreview extends StatelessWidget {
     return spans;
   }
 
+  bool _isLikelyObjectKeyToken(String token, String line, int tokenEnd) {
+    if (!token.startsWith('"') || !token.endsWith('"')) {
+      return false;
+    }
+
+    var cursor = tokenEnd;
+    while (
+        cursor < line.length && (line[cursor] == ' ' || line[cursor] == '\t')) {
+      cursor += 1;
+    }
+
+    return cursor < line.length && line[cursor] == ':';
+  }
+
   TextStyle _styleForToken(
     String token,
     TextStyle baseStyle,
     ColorScheme darkScheme, {
     required bool commentLine,
+    required bool isKey,
   }) {
     if (_hexPattern.hasMatch(token)) {
       final color = _parseHexColor(token);
@@ -2456,8 +2683,24 @@ class _ExportFilePreview extends StatelessWidget {
       );
     }
 
+    if (_quotedHexPattern.hasMatch(token)) {
+      final color = _parseHexColor(token.substring(1, token.length - 1));
+      return baseStyle.copyWith(
+        color: color,
+        fontWeight: FontWeight.w700,
+        backgroundColor: color.withValues(alpha: 0.25),
+      );
+    }
+
     if (commentLine) {
       return baseStyle.copyWith(color: darkScheme.outline);
+    }
+
+    if (isKey) {
+      return baseStyle.copyWith(
+        color: darkScheme.secondary,
+        fontWeight: FontWeight.w600,
+      );
     }
 
     if (token.startsWith('"')) {
@@ -2570,6 +2813,8 @@ class _PreviewBox extends StatefulWidget {
 class _PreviewBoxState extends State<_PreviewBox> {
   Offset? _dragStart;
   Offset? _dragCurrent;
+  int _activePointerCount = 0;
+  int? _dragPointerId;
 
   Rect? _dragRect(double width, double height) {
     final start = _dragStart;
@@ -2614,6 +2859,71 @@ class _PreviewBoxState extends State<_PreviewBox> {
     );
   }
 
+  void _handleBoxPointerDown(PointerDownEvent event) {
+    if (widget.profile.mode != ExtractionMode.boxRange) {
+      return;
+    }
+
+    _activePointerCount += 1;
+
+    if (_activePointerCount == 1) {
+      setState(() {
+        _dragPointerId = event.pointer;
+        _dragStart = event.localPosition;
+        _dragCurrent = event.localPosition;
+      });
+      return;
+    }
+
+    if (_dragPointerId != null) {
+      setState(() {
+        _dragPointerId = null;
+        _dragStart = null;
+        _dragCurrent = null;
+      });
+    }
+  }
+
+  void _handleBoxPointerMove(PointerMoveEvent event) {
+    if (widget.profile.mode != ExtractionMode.boxRange) {
+      return;
+    }
+    if (_activePointerCount != 1 || _dragPointerId != event.pointer) {
+      return;
+    }
+
+    setState(() {
+      _dragCurrent = event.localPosition;
+    });
+  }
+
+  void _handleBoxPointerUp(
+    PointerEvent event,
+    double width,
+    double height,
+  ) {
+    if (widget.profile.mode != ExtractionMode.boxRange) {
+      _activePointerCount = math.max(0, _activePointerCount - 1);
+      return;
+    }
+
+    final shouldCommit =
+        _dragPointerId == event.pointer && _activePointerCount <= 1;
+    if (shouldCommit) {
+      _commitDragRect(width, height);
+    }
+
+    if (_dragPointerId == event.pointer) {
+      setState(() {
+        _dragPointerId = null;
+        _dragStart = null;
+        _dragCurrent = null;
+      });
+    }
+
+    _activePointerCount = math.max(0, _activePointerCount - 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -2629,6 +2939,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
         final dragRect = _dragRect(width, height);
 
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTapDown: profile.mode == ExtractionMode.eyeDropper
               ? (details) {
                   final nx = (details.localPosition.dx / width).clamp(0.0, 1.0);
@@ -2640,30 +2951,6 @@ class _PreviewBoxState extends State<_PreviewBox> {
                       eyeDropperY: ny,
                     ),
                   );
-                }
-              : null,
-          onPanStart: profile.mode == ExtractionMode.boxRange
-              ? (details) {
-                  setState(() {
-                    _dragStart = details.localPosition;
-                    _dragCurrent = details.localPosition;
-                  });
-                }
-              : null,
-          onPanUpdate: profile.mode == ExtractionMode.boxRange
-              ? (details) {
-                  setState(() {
-                    _dragCurrent = details.localPosition;
-                  });
-                }
-              : null,
-          onPanEnd: profile.mode == ExtractionMode.boxRange
-              ? (_) {
-                  _commitDragRect(width, height);
-                  setState(() {
-                    _dragStart = null;
-                    _dragCurrent = null;
-                  });
                 }
               : null,
           child: Container(
@@ -2691,6 +2978,18 @@ class _PreviewBoxState extends State<_PreviewBox> {
                     ),
                   ),
                 ),
+                if (profile.mode == ExtractionMode.boxRange)
+                  Positioned.fill(
+                    child: Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerDown: _handleBoxPointerDown,
+                      onPointerMove: _handleBoxPointerMove,
+                      onPointerUp: (event) =>
+                          _handleBoxPointerUp(event, width, height),
+                      onPointerCancel: (event) =>
+                          _handleBoxPointerUp(event, width, height),
+                    ),
+                  ),
                 if (profile.mode == ExtractionMode.boxRange)
                   Positioned.fromRect(
                     rect: boxRect,
@@ -3552,7 +3851,8 @@ class _PanelFrame extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr(title), style: Theme.of(context).textTheme.titleMedium),
+            Text(context.tr(title),
+                style: Theme.of(context).textTheme.titleMedium),
             if (subtitle.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
@@ -3695,7 +3995,8 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(context.tr(title), style: Theme.of(context).textTheme.titleSmall),
+            Text(context.tr(title),
+                style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Text(
               context.tr(description),

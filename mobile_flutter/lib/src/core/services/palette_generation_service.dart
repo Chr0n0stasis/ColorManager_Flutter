@@ -35,7 +35,7 @@ class PaletteGenerationService {
           steps: steps,
         );
       case PaletteGenerationKind.heatmap:
-        return generateHeatmap(steps: steps);
+        return generateHeatmap(baseHex: baseHex, steps: steps);
       case PaletteGenerationKind.analogous:
         return generateAnalogous(baseHex: baseHex, count: math.max(5, steps));
       case PaletteGenerationKind.complementary:
@@ -76,13 +76,18 @@ class PaletteGenerationService {
     );
   }
 
-  List<ColorEntry> generateHeatmap({required int steps}) {
+  List<ColorEntry> generateHeatmap({
+    required String baseHex,
+    required int steps,
+  }) {
+    final base = _normalizeRgb(baseHex);
     final anchors = <List<int>>[
-      <int>[44, 72, 166],
-      <int>[35, 182, 230],
-      <int>[144, 224, 86],
-      <int>[255, 209, 102],
-      <int>[245, 80, 64],
+      _scaleRgb(base, 0.42),
+      _scaleRgb(base, 0.66),
+      base,
+      _liftToWhite(base, 0.28),
+      _liftToWhite(base, 0.52),
+      _liftToWhite(base, 0.72),
     ];
     return _interpolateList(
       anchors: anchors,
@@ -175,7 +180,8 @@ class PaletteGenerationService {
       return <ColorEntry>[
         ColorEntry(
           name: '$namePrefix 1',
-          hexCode: rgbToHex(anchors.first[0], anchors.first[1], anchors.first[2]),
+          hexCode:
+              rgbToHex(anchors.first[0], anchors.first[1], anchors.first[2]),
         ),
       ];
     }
@@ -214,6 +220,24 @@ class PaletteGenerationService {
 
   int _lerpChannel(int left, int right, double t) {
     return (left + (right - left) * t).round().clamp(0, 255);
+  }
+
+  List<int> _scaleRgb(List<int> rgb, double factor) {
+    final f = factor.clamp(0.0, 1.0);
+    return <int>[
+      (rgb[0] * f).round().clamp(0, 255),
+      (rgb[1] * f).round().clamp(0, 255),
+      (rgb[2] * f).round().clamp(0, 255),
+    ];
+  }
+
+  List<int> _liftToWhite(List<int> rgb, double amount) {
+    final a = amount.clamp(0.0, 1.0);
+    return <int>[
+      _lerpChannel(rgb[0], 255, a),
+      _lerpChannel(rgb[1], 255, a),
+      _lerpChannel(rgb[2], 255, a),
+    ];
   }
 
   double _relativeLuminance(List<int> rgb) {

@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "path": "mobile_flutter"
+    }
+  ],
+  "settings": {
+    "search.exclude": {
+      "**/build": true,
+      "**/.dart_tool": true
+    }
+  }
+}

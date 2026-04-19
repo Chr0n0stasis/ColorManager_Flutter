@@ -1,0 +1,3 @@
+# Treat upstream legacy desktop source as vendored in GitHub language stats.
+app/** linguist-vendored
+build_exe.py linguist-vendored

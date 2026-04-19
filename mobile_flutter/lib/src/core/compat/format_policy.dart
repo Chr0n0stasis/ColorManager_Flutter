@@ -5,8 +5,11 @@ enum PaletteFormat {
   gpl,
   image,
   json,
+  matlab,
   pal,
   pdf,
+  python,
+  r,
 }
 
 const bool zeroNewFormatPolicyEnabled = true;
@@ -28,5 +31,8 @@ const Set<PaletteFormat> supportedOutputFormats = <PaletteFormat>{
   PaletteFormat.csv,
   PaletteFormat.gpl,
   PaletteFormat.json,
+  PaletteFormat.matlab,
   PaletteFormat.pal,
+  PaletteFormat.python,
+  PaletteFormat.r,
 };
