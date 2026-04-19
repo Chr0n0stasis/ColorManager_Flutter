@@ -6,7 +6,6 @@
   "Settings": "Settings",
   "Close": "Close",
   "Management": "Management",
-
   "Import File": "Import File",
   "Import": "Import",
   "Camera Sampling": "Camera Sampling",
@@ -24,7 +23,6 @@
   "Supports JSON/CSV/GPL/CPT/ASE/PAL, images and PDF.": "Supports JSON/CSV/GPL/CPT/ASE/PAL, images and PDF.",
   "Remove favorite": "Remove favorite",
   "Add favorite": "Add favorite",
-
   "File Preview": "File Preview",
   "File preview, sampling modes, and chart preview.": "File preview, sampling modes, and chart preview.",
   "Preview Controls": "Preview Controls",
@@ -37,7 +35,6 @@
   "Current file does not support image preview": "Current file does not support image preview",
   "No files available for preview": "No files available for preview",
   "Import files in Management first, then select here.": "Import files in Management first, then select here.",
-
   "Sampling Settings": "Sampling Settings",
   "Sampling Results": "Sampling Results",
   "Sampling results (tap to add into export cart)": "Sampling results (tap to add into export cart)",
@@ -49,7 +46,6 @@
   "No visual data": "No visual data",
   "Please run sampling first.": "Please run sampling first.",
   "Supports whole file/page/visible range/box selection/eyedropper/camera mode.": "Supports whole file/page/visible range/box selection/eyedropper/camera mode.",
-
   "Sampling count: {count}": "Sampling count: {count}",
   "Visible range factor: {factor}": "Visible range factor: {factor}",
   "Box left: {value}": "Box left: {value}",
@@ -59,11 +55,9 @@
   "Eyedropper X: {value}": "Eyedropper X: {value}",
   "Eyedropper Y: {value}": "Eyedropper Y: {value}",
   "Page": "Page",
-
   "Chart Style": "Chart Style",
   "Vision Mode": "Vision Mode",
   "Marker Shape": "Marker Shape",
-
   "Export Options": "Export Options",
   "Export File Settings": "Export File Settings",
   "Export Format": "Export Format",
@@ -79,7 +73,6 @@
   "Edit export palette, generate schemes, sort and export scientific formats.": "Edit export palette, generate schemes, sort and export scientific formats.",
   "Export Cart Colors": "Export Cart Colors",
   "Tap colors in the middle preview to add to export cart.": "Tap colors in the middle preview to add to export cart.",
-
   "Clear Export Cart": "Clear Export Cart",
   "Clear": "Clear",
   "Load Current File": "Load Current File",
@@ -98,7 +91,6 @@
   "Save": "Save",
   "Add": "Add",
   "Invalid HEX format, please input #RRGGBB": "Invalid HEX format, please input #RRGGBB",
-
   "Palette Generator": "Palette Generator",
   "Generation Mode": "Generation Mode",
   "Add colors to the export list first": "Add colors to the export list first",
@@ -114,12 +106,10 @@
   "Generated Palette Preview": "Generated Palette Preview",
   "Replace Export Cart": "Replace Export Cart",
   "Append To Export Cart": "Append To Export Cart",
-
   "Export Strategy": "Export Strategy",
   "Sort by lightness before export": "Sort by lightness before export",
   "Export as heatmap gradient": "Export as heatmap gradient",
   "Heatmap Steps: {count}": "Heatmap Steps: {count}",
-
   "Appearance": "Appearance",
   "Light": "Light",
   "Dark": "Dark",
@@ -135,26 +125,22 @@
   "System Color": "System Color",
   "Manual Color": "Manual Color",
   "Reset default theme color": "Reset default theme color",
-
   "Language": "Language",
   "Chinese": "Chinese",
   "English (US)": "English (US)",
   "System language falls back to English (US) when unsupported.": "System language falls back to English (US) when unsupported.",
-
   "Copyright": "Copyright",
   "Copyright & License": "Copyright & License",
   "Open copyright page": "Open copyright page",
   "Author: {author}\nVersion: {version}": "Author: {author}\nVersion: {version}",
   "App: {appName}\nVersion: {version}\nAuthor: {author}": "App: {appName}\nVersion: {version}\nAuthor: {author}",
   "Export source suffix: {suffix}": "Export source suffix: {suffix}",
-
   "Ver {version} | Author: {author} | {tagline}": "Ver {version} | Author: {author} | {tagline}",
   "Ver {version} | {message}": "Ver {version} | {message}",
   "For academic exchange only, free of charge": "For academic exchange only, free of charge",
   "For academic exchange only, app is free of charge": "For academic exchange only, app is free of charge",
   "If you paid for this software, request a refund and report the seller": "If you paid for this software, request a refund and report the seller",
   "PolyForm Noncommercial 1.0.0 | Commercial use requires explicit author permission": "PolyForm Noncommercial 1.0.0 | Commercial use requires explicit author permission",
-
   "Importing file...": "Importing file...",
   "Imported {fileName} ({count} colors).": "Imported {fileName} ({count} colors).",
   "Import canceled.": "Import canceled.",
@@ -208,22 +194,18 @@
   "Added {count} colors to export cart.": "Added {count} colors to export cart.",
   "Preview build failed: {error}": "Preview build failed: {error}",
   "... preview truncated ...": "... preview truncated ...",
-
   "Camera sampling is not supported on Web.": "Camera sampling is not supported on Web.",
   "Camera permission is not declared in the current iOS host app. Camera sampling is temporarily disabled to avoid crashes.": "Camera permission is not declared in the current iOS host app. Camera sampling is temporarily disabled to avoid crashes.",
   "Camera sampling is not supported on the current platform.": "Camera sampling is not supported on the current platform.",
-
-  "{count} colors · {format} · {mode} · Re-sampled {runs} times": "{count} colors · {format} · {mode} · Re-sampled {runs} times",
-  "{count} colors · {format} · Current mode: {mode}": "{count} colors · {format} · Current mode: {mode}",
-  "{count} colors · {format}": "{count} colors · {format}",
-
+  "{count} colors \u00b7 {format} \u00b7 {mode} \u00b7 Re-sampled {runs} times": "{count} colors \u00b7 {format} \u00b7 {mode} \u00b7 Re-sampled {runs} times",
+  "{count} colors \u00b7 {format} \u00b7 Current mode: {mode}": "{count} colors \u00b7 {format} \u00b7 Current mode: {mode}",
+  "{count} colors \u00b7 {format}": "{count} colors \u00b7 {format}",
   "Whole File": "Whole File",
   "Selected Page": "Selected Page",
   "Visible Range": "Visible Range",
   "Box Range (Drag)": "Box Range (Drag)",
   "Eyedropper": "Eyedropper",
   "Camera Frame": "Camera Frame",
-
   "Table": "Table",
   "Line Chart": "Line Chart",
   "Bar Chart": "Bar Chart",
@@ -231,27 +213,22 @@
   "Clustered Heatmap": "Clustered Heatmap",
   "Circular Chart": "Circular Chart",
   "Map View": "Map View",
-
   "Normal": "Normal",
   "Grayscale": "Grayscale",
   "Colorblind Protan": "Colorblind Protan",
   "Colorblind Deutan": "Colorblind Deutan",
   "Colorblind Tritan": "Colorblind Tritan",
-
   "Circle": "Circle",
   "Square": "Square",
   "Triangle": "Triangle",
-
   "Two-Color Gradient": "Two-Color Gradient",
   "Heatmap Palette": "Heatmap Palette",
   "Analogous": "Analogous",
   "Complementary": "Complementary",
   "Gradient to White": "Gradient to White",
-
   "Warm White": "Warm White",
   "Neutral White": "Neutral White",
   "Cool White": "Cool White",
-
   "Import from Local": "Import from Local",
   "Import from Camera": "Import from Camera",
   "Import from Cloud Storage": "Import from Cloud Storage",
@@ -267,5 +244,8 @@
   "Please configure WebDAV in Settings first.": "Please configure WebDAV in Settings first.",
   "Connect failed": "Connect failed",
   "Downloading {file}...": "Downloading {file}...",
-  "Download failed": "Download failed"
+  "Download failed": "Download failed",
+  "Heatmap Palette Generator": "Heatmap Palette Generator",
+  "Perceptually Uniform": "Perceptually Uniform",
+  "Rainbow/Jet": "Rainbow/Jet"
 }

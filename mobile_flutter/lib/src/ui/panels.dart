@@ -1620,31 +1620,72 @@ class PreviewInspectorPanel extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               ),
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final columns = width >= 420 ? 2 : 1;
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: columns == 2 ? 2.4 : 2.8,
+            child: file!.palette.colors.isEmpty
+                ? const SizedBox.shrink()
+                : Table(
+                    border: TableBorder.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    columnWidths: const {
+                      0: FlexColumnWidth(2),
+                      1: FlexColumnWidth(3),
+                    },
+                    children: [
+                      TableRow(
+                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(context.tr('Color Name'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(context.tr('HEX Code'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                      for (int i = 0; i < file!.palette.colors.length; i++)
+                        () {
+                          final color = file!.palette.colors[i];
+                          final bgHex = _parseHexColor(color.hexCode);
+                          final isDarkBg = bgHex.computeLuminance() < 0.45;
+                          final textColor = isDarkBg ? Colors.white : Colors.black;
+                          final selected = isColorInCart(color);
+                          final fw = selected ? FontWeight.w900 : FontWeight.w500;
+                          return TableRow(
+                            decoration: BoxDecoration(color: bgHex),
+                            children: [
+                              TableCell(
+                                verticalAlignment: TableCellVerticalAlignment.fill,
+                                child: InkWell(
+                                  onTap: () => onToggleCartColor(color),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      color.name,
+                                      style: TextStyle(color: textColor, fontWeight: fw, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              TableCell(
+                                verticalAlignment: TableCellVerticalAlignment.fill,
+                                child: InkWell(
+                                  onTap: () => onToggleCartColor(color),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Text(color.hexCode, style: TextStyle(color: textColor, fontWeight: fw, fontSize: 13))),
+                                        if (selected) Icon(Icons.check_circle, size: 16, color: textColor),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }(),
+                    ],
                   ),
-                  itemCount: file!.palette.colors.length,
-                  itemBuilder: (context, index) {
-                    final color = file!.palette.colors[index];
-                    return _ColorCard(
-                      color: color,
-                      selected: isColorInCart(color),
-                      onPressed: () => onToggleCartColor(color),
-                    );
-                  },
-                );
-              },
-            ),
           ),
           const SizedBox(height: 8),
           _FoldCard(
